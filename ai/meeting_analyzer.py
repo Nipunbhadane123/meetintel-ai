@@ -1,0 +1,30 @@
+import os
+import logging
+from .gemini import GeminiProvider
+from .openai_provider import OpenAIProvider
+
+logger = logging.getLogger(__name__)
+
+def get_ai_provider():
+    provider_name = os.getenv("AI_PROVIDER", "Gemini").lower()
+    if provider_name == "openai":
+        try:
+            return OpenAIProvider()
+        except ValueError:
+            logger.warning("OpenAI configured but API key missing. Falling back to Gemini.")
+            return GeminiProvider()
+    else:
+        return GeminiProvider()
+
+class MeetingAnalyzer:
+    def __init__(self):
+        self.provider = get_ai_provider()
+        
+    def analyze(self, transcript_text: str) -> dict:
+        """Generates all meeting insights from transcript."""
+        logger.info("Starting AI meeting analysis...")
+        return self.provider.generate_insights(transcript_text)
+        
+    def ask(self, transcript_text: str, question: str) -> str:
+        """Ask a specific question about the meeting."""
+        return self.provider.ask_question(transcript_text, question)
