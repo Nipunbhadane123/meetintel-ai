@@ -2,18 +2,24 @@ from sqlalchemy.orm import Session
 from . import models
 import uuid
 
-def create_meeting(db: Session, filename: str, duration: float = 0.0) -> models.Meeting:
+def create_meeting(db: Session, filename: str, duration: float = 0.0, file_hash: str = None) -> models.Meeting:
     meeting = models.Meeting(
         id=str(uuid.uuid4()),
         filename=filename,
         title=f"Meeting - {filename}",
         duration=duration,
+        file_hash=file_hash,
         processing_status="Processing"
     )
     db.add(meeting)
     db.commit()
     db.refresh(meeting)
     return meeting
+
+def get_meeting_by_hash(db: Session, file_hash: str):
+    if not file_hash:
+        return None
+    return db.query(models.Meeting).filter(models.Meeting.file_hash == file_hash).first()
 
 def update_meeting_status(db: Session, meeting_id: str, status: str):
     meeting = db.query(models.Meeting).filter(models.Meeting.id == meeting_id).first()

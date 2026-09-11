@@ -9,6 +9,7 @@ class Meeting(Base):
     id = Column(String, primary_key=True, index=True) # UUID
     filename = Column(String)
     title = Column(String, default="Untitled Meeting")
+    file_hash = Column(String, nullable=True)
     date = Column(DateTime, default=func.now())
     duration = Column(Float, default=0.0) # seconds
     language = Column(String, default="en")
@@ -30,6 +31,9 @@ class Meeting(Base):
     speakers = relationship("Speaker", back_populates="meeting", cascade="all, delete-orphan")
     action_items = relationship("ActionItem", back_populates="meeting", cascade="all, delete-orphan")
     decisions = relationship("Decision", back_populates="meeting", cascade="all, delete-orphan")
+    participants = relationship("Participant", back_populates="meeting", cascade="all, delete-orphan")
+    deadlines = relationship("Deadline", back_populates="meeting", cascade="all, delete-orphan")
+    priorities = relationship("Priority", back_populates="meeting", cascade="all, delete-orphan")
 
 class Speaker(Base):
     __tablename__ = "speakers"
@@ -60,7 +64,7 @@ class ActionItem(Base):
     id = Column(Integer, primary_key=True, index=True)
     meeting_id = Column(String, ForeignKey("meetings.id"))
     task = Column(String)
-    owner = Column(String)
+    assigned_to = Column(String)
     deadline = Column(String)
     priority = Column(String)
     status = Column(String, default="Pending") # Pending, In Progress, Completed
@@ -77,3 +81,35 @@ class Decision(Base):
     timestamp_approx = Column(String, nullable=True)
     
     meeting = relationship("Meeting", back_populates="decisions")
+
+class Participant(Base):
+    __tablename__ = "participants"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    meeting_id = Column(String, ForeignKey("meetings.id"))
+    name = Column(String)
+    speaker_id = Column(String)
+    responsibilities = Column(String) # JSON list of strings
+    
+    meeting = relationship("Meeting", back_populates="participants")
+
+class Deadline(Base):
+    __tablename__ = "deadlines"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    meeting_id = Column(String, ForeignKey("meetings.id"))
+    description = Column(String)
+    date = Column(String)
+    related_task = Column(String)
+    
+    meeting = relationship("Meeting", back_populates="deadlines")
+
+class Priority(Base):
+    __tablename__ = "priorities"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    meeting_id = Column(String, ForeignKey("meetings.id"))
+    item = Column(String)
+    priority_level = Column(String)
+    
+    meeting = relationship("Meeting", back_populates="priorities")

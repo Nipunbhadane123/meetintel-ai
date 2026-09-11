@@ -43,7 +43,6 @@ def process_audio(input_file: str) -> str:
             '-acodec', 'pcm_s16le',
             '-ar', '16000',
             '-ac', '1',
-            '-af', 'loudnorm',
             '-y', # Overwrite output
             str(output_path)
         ]

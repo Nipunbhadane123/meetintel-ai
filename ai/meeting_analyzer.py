@@ -23,8 +23,16 @@ class MeetingAnalyzer:
     def analyze(self, transcript_text: str) -> dict:
         """Generates all meeting insights from transcript."""
         logger.info("Starting AI meeting analysis...")
-        return self.provider.generate_insights(transcript_text)
+        import time
+        start = time.time()
+        res = self.provider.generate_insights(transcript_text)
+        logger.info(f"AI meeting analysis completed in {time.time() - start:.2f}s")
+        return res
         
-    def ask(self, transcript_text: str, question: str) -> str:
+    def ask(self, transcript_text: str, question: str, insights: str = "") -> str:
         """Ask a specific question about the meeting."""
-        return self.provider.ask_question(transcript_text, question)
+        import time
+        start = time.time()
+        res = self.provider.ask_question(transcript_text, question, insights)
+        logger.info(f"Ask AI completed in {time.time() - start:.2f}s")
+        return res

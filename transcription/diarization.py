@@ -2,8 +2,36 @@ import os
 import torch
 import logging
 from pyannote.audio import Pipeline
+import streamlit as st
 
 logger = logging.getLogger(__name__)
+
+@st.cache_resource(show_spinner=False)
+def get_diarization_pipeline():
+    token = os.getenv("HUGGINGFACE_TOKEN")
+    if not token:
+        raise ValueError("HUGGINGFACE_TOKEN environment variable not set. Required for diarization.")
+    
+    logger.info("Loading Pyannote diarization pipeline (Cached)...")
+    try:
+        pipeline = Pipeline.from_pretrained(
+            "pyannote/speaker-diarization-community-1",
+            token=token
+        )
+    except TypeError:
+        pipeline = Pipeline.from_pretrained(
+            "pyannote/speaker-diarization-community-1",
+            use_auth_token=token
+        )
+    
+    # Use CUDA if available, otherwise CPU (MPS can cause hangs in pyannote)
+    if torch.cuda.is_available():
+        pipeline.to(torch.device("cuda"))
+    else:
+        pipeline.to(torch.device("cpu"))
+        
+    logger.info("Diarization pipeline loaded.")
+    return pipeline
 
 class SpeakerDiarizer:
     def __init__(self):
@@ -11,29 +39,7 @@ class SpeakerDiarizer:
 
     def load_pipeline(self):
         if self.pipeline is None:
-            token = os.getenv("HUGGINGFACE_TOKEN")
-            if not token:
-                raise ValueError("HUGGINGFACE_TOKEN environment variable not set. Required for diarization.")
-            
-            logger.info("Loading Pyannote diarization pipeline...")
-            try:
-                self.pipeline = Pipeline.from_pretrained(
-                    "pyannote/speaker-diarization-community-1",
-                    token=token
-                )
-            except TypeError:
-                self.pipeline = Pipeline.from_pretrained(
-                    "pyannote/speaker-diarization-community-1",
-                    use_auth_token=token
-                )
-            
-            # Use CUDA if available, otherwise CPU (MPS can cause hangs in pyannote)
-            if torch.cuda.is_available():
-                self.pipeline.to(torch.device("cuda"))
-            else:
-                self.pipeline.to(torch.device("cpu"))
-                
-            logger.info("Diarization pipeline loaded.")
+            self.pipeline = get_diarization_pipeline()
 
     def diarize(self, audio_path: str) -> list:
         """
@@ -42,6 +48,8 @@ class SpeakerDiarizer:
         """
         self.load_pipeline()
         logger.info(f"Starting diarization for {audio_path}")
+        import time
+        start_time = time.time()
         
         import scipy.io.wavfile as wavfile
         import numpy as np
@@ -89,4 +97,5 @@ class SpeakerDiarizer:
                 "speaker": speaker
             })
             
+        logger.info(f"Pyannote diarization completed in {time.time() - start_time:.2f}s")
         return segments

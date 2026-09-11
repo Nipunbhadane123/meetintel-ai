@@ -1,9 +1,13 @@
 import os
 import json
 import logging
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from .base import AIProvider
 from .schemas import MeetingInsightsSchema
+from tenacity import retry, stop_after_attempt, wait_exponential
+
+from .prompts.meeting_intelligence_prompt import MEETING_ANALYSIS_PROMPT, SYNTHESIS_PROMPT, QA_PROMPT
 
 logger = logging.getLogger(__name__)
 
@@ -12,80 +16,93 @@ class GeminiProvider(AIProvider):
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("GEMINI_API_KEY not set.")
-        genai.configure(api_key=api_key)
-        self.models_to_try = ['gemini-2.5-flash', 'gemini-3.5-flash', 'gemini-flash-latest']
-        self.model = None
+        self.client = genai.Client(api_key=api_key)
+        self.models_to_try = ['gemini-3.6-flash', 'gemini-3.5-flash']
+        self.model_name = None
+        self.max_chunk_length = 80000  # characters
         
-    def generate_insights(self, transcript: str) -> dict:
-        prompt = f"""
-        You are an expert AI meeting analyst. Analyze the following meeting transcript.
-        
-        Strict Rules:
-        1. Use ONLY the supplied transcript. Do not invent facts or speakers.
-        2. Distinguish decisions from suggestions.
-        3. Do not invent deadlines. If not mentioned, say 'Not specified'.
-        4. Return ONLY valid JSON that matches this exact schema:
-        {MeetingInsightsSchema.model_json_schema()}
-        
-        Do not wrap the JSON in markdown code blocks. Just output raw JSON.
-        
-        Transcript:
-        {transcript}
-        """
-        
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), reraise=True)
+    def _call_gemini_with_retry(self, prompt: str, schema=None) -> str:
         last_error = None
         for model_name in self.models_to_try:
             try:
-                model = genai.GenerativeModel(model_name)
-                # Try to generate content without response_mime_type to ensure compatibility with all models and SDKs
-                response = model.generate_content(prompt)
+                config_kwargs = {}
+                if schema:
+                    config_kwargs["response_mime_type"] = "application/json"
+                    config_kwargs["response_schema"] = schema
                 
-                raw_json = response.text.strip()
-                # Clean up markdown code blocks if the model ignored the instruction
-                if raw_json.startswith("```json"):
-                    raw_json = raw_json[7:]
-                if raw_json.startswith("```"):
-                    raw_json = raw_json[3:]
-                if raw_json.endswith("```"):
-                    raw_json = raw_json[:-3]
-                    
-                self.model = model # Cache the working model for Q&A
-                return json.loads(raw_json.strip())
-                
+                response = self.client.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(**config_kwargs) if config_kwargs else None,
+                )
+                self.model_name = model_name
+                return response.text
             except Exception as e:
                 logger.warning(f"Failed with model {model_name}: {e}")
                 last_error = e
-                
-        logger.error("All Gemini models failed.")
-        raise RuntimeError(f"Failed to generate insights: {last_error}")
+        
+        raise RuntimeError(f"All Gemini models failed: {last_error}")
 
-    def ask_question(self, transcript: str, question: str) -> str:
-        if self.model is None:
-            # Fallback for Q&A if insights weren't generated in this session
-            for model_name in self.models_to_try:
-                try:
-                    self.model = genai.GenerativeModel(model_name)
-                    # Test if it works
-                    break
-                except Exception:
-                    continue
+    def _chunk_transcript(self, transcript: str) -> list[str]:
+        chunks = []
+        current_chunk = ""
+        lines = transcript.split('\n')
+        for line in lines:
+            if len(current_chunk) + len(line) > self.max_chunk_length:
+                if current_chunk:
+                    chunks.append(current_chunk)
+                current_chunk = line + '\n'
+            else:
+                current_chunk += line + '\n'
+        if current_chunk:
+            chunks.append(current_chunk)
+        return chunks
 
-        if self.model is None:
-            self.model = genai.GenerativeModel('gemini-pro')
+    def generate_insights(self, transcript: str) -> dict:
+        if not transcript or not transcript.strip():
+            raise ValueError("Transcript is empty.")
             
-        prompt = f"""
-        You are an AI meeting assistant. Answer the user's question based strictly on the following transcript.
-        If the answer cannot be found in the transcript, reply exactly with: "I couldn't find this information in the meeting."
-        Do not hallucinate. Include transcript timestamps if available.
+        chunks = self._chunk_transcript(transcript)
         
-        Transcript:
-        {transcript}
-        
-        Question: {question}
-        """
+        if len(chunks) == 1:
+            return self._process_single_chunk(chunks[0])
+        else:
+            # Multi-chunk processing
+            intermediate_results = []
+            for i, chunk in enumerate(chunks):
+                logger.info(f"Processing chunk {i+1}/{len(chunks)}")
+                try:
+                    result = self._process_single_chunk(chunk)
+                    intermediate_results.append(result)
+                except Exception as e:
+                    logger.error(f"Failed on chunk {i+1}: {e}")
+                    
+            # Combine intermediate results
+            return self._synthesize_results(intermediate_results)
+
+    def _process_single_chunk(self, chunk: str) -> dict:
+        prompt = MEETING_ANALYSIS_PROMPT.format(transcript=chunk)
+        raw_json = self._call_gemini_with_retry(prompt, MeetingInsightsSchema)
         try:
-            response = self.model.generate_content(prompt)
-            return response.text.strip()
+            parsed_json = json.loads(raw_json)
+            validated_data = MeetingInsightsSchema(**parsed_json)
+            return validated_data.model_dump()
         except Exception as e:
-            logger.error(f"Gemini API error during Q&A: {e}")
-            return "Sorry, there was an error processing your question."
+            logger.error(f"Validation failed for chunk: {e}")
+            raise RuntimeError(f"Validation failed: {e}")
+
+    def _synthesize_results(self, results: list[dict]) -> dict:
+        synthesis_prompt = SYNTHESIS_PROMPT.format(results=json.dumps(results, indent=2))
+        raw_json = self._call_gemini_with_retry(synthesis_prompt, MeetingInsightsSchema)
+        try:
+            parsed_json = json.loads(raw_json)
+            validated_data = MeetingInsightsSchema(**parsed_json)
+            return validated_data.model_dump()
+        except Exception as e:
+            logger.error(f"Validation failed for synthesis: {e}")
+            raise RuntimeError(f"Validation failed: {e}")
+
+    def ask_question(self, transcript: str, question: str, insights: str = "") -> str:
+        prompt = QA_PROMPT.format(transcript=transcript, question=question, insights=insights)
+        return self._call_gemini_with_retry(prompt)

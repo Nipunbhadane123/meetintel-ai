@@ -20,35 +20,17 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+from ui.styles import apply_global_styles
+from ui.navigation import render_sidebar_navigation
+
 def main():
-    st.title("MeetIntel AI")
-    st.markdown("### AI-Powered Meeting Intelligence")
+    apply_global_styles()
     
     # Initialize session state for navigation
     if 'current_page' not in st.session_state:
         st.session_state['current_page'] = "Dashboard"
         
-    st.sidebar.title("MeetIntel AI")
-    
-    # Sidebar navigation
-    pages = ["Dashboard", "New Meeting", "Meetings", "Transcripts", "Settings"]
-    
-    # Use radio button, but handle internal pages gracefully
-    internal_pages = ["Processing", "Meeting Results"]
-    current_page = st.session_state.get('current_page', 'Dashboard')
-
-    # Find a safe index for the radio button (visual only)
-    visual_index = pages.index(current_page) if current_page in pages else 0
-
-    selected_page = st.sidebar.radio(
-        "Navigation",
-        pages,
-        index=visual_index
-    )
-    # If the user clicked the sidebar to change pages, override the internal state
-    if selected_page != (current_page if current_page in pages else pages[visual_index]):
-        st.session_state['current_page'] = selected_page
-        st.rerun()
+    render_sidebar_navigation()
         
     page = st.session_state['current_page']
     
@@ -80,27 +62,52 @@ def main():
             st.error("Meeting not found.")
             return
             
-        st.title(f"Results: {meeting.title}")
+        from ui.components import section_header
+        duration_str = f"{int(meeting.duration)//60}m {int(meeting.duration)%60}s"
+        subtitle = f"📅 {meeting.date.strftime('%Y-%m-%d')} • ⏱️ {duration_str} • 👥 {meeting.speaker_count} Speakers"
         
-        tab1, tab2, tab3, tab4, tab5 = st.tabs(["Overview & Insights", "Transcript", "Action Items", "Ask AI", "MoM"])
+        # Display Header
+        st.markdown(f"""
+            <div class="page-title-container" style="display: flex; justify-content: space-between; align-items: flex-end;">
+                <div>
+                    <h2 class="page-title">📄 {meeting.title}</h2>
+                    <p class="page-subtitle">{subtitle}</p>
+                </div>
+                <span class="badge badge-completed" style="font-size: 0.9rem;">✓ {meeting.processing_status}</span>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs(["Overview", "Action Items", "Participants", "Deadlines", "Priorities", "Transcript", "Ask AI", "MoM"])
         
         with tab1:
             from ui.insights_view import render_insights_tab
             render_insights_tab(meeting)
             
         with tab2:
-            from ui.transcript_view import render_transcript_tab
-            render_transcript_tab(meeting.id)
-            
-        with tab3:
             from ui.action_items import render_action_items_tab
             render_action_items_tab(meeting.id)
             
+        with tab3:
+            from ui.participants_view import render_participants_tab
+            render_participants_tab(meeting.id)
+            
         with tab4:
+            from ui.deadlines_view import render_deadlines_tab
+            render_deadlines_tab(meeting.id)
+            
+        with tab5:
+            from ui.priorities_view import render_priorities_tab
+            render_priorities_tab(meeting.id)
+            
+        with tab6:
+            from ui.transcript_view import render_transcript_tab
+            render_transcript_tab(meeting.id)
+            
+        with tab7:
             from ui.ask_ai import render_ask_ai_tab
             render_ask_ai_tab(meeting.id)
             
-        with tab5:
+        with tab8:
             from ui.mom import render_mom_tab
             render_mom_tab(meeting)
             
