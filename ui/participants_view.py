@@ -23,16 +23,21 @@ def render_participants_tab(meeting_id):
             
         resp_html = ""
         if resp:
-            resp_html = "<ul>" + "".join([f"<li>{r}</li>" for r in resp]) + "</ul>"
+            resp_html = "<ul style='padding-left: 20px; color: var(--mt-text-secondary); line-height: 1.6; margin: 0;'>" + "".join([f"<li style='margin-bottom: 6px;'>{r}</li>" for r in resp]) + "</ul>"
         else:
-            resp_html = "<span style='color: var(--text-muted);'>No explicitly assigned responsibilities.</span>"
+            resp_html = "<span style='color: var(--mt-text-muted);'>No explicitly assigned responsibilities.</span>"
             
         html = f"""
-        <div class="saas-card" style="margin-bottom: 1rem;">
-            <h4 style="color: var(--text-main); margin-bottom: 0.25rem;">{p.name}</h4>
-            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">Speaker ID: {p.speaker_id}</p>
-            <div style="font-size: 0.9rem;">
-                <strong>Responsibilities:</strong>
+        <div class="saas-card" style="margin-bottom: var(--mt-space-md); padding: var(--mt-space-lg);">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--mt-surface-soft); border: 1px solid var(--mt-border); display: flex; align-items: center; justify-content: center; font-weight: 600; color: var(--mt-primary);">{p.name[0].upper() if p.name else "?"}</div>
+                <div>
+                    <h4 style="color: var(--mt-text); margin: 0; font-weight: 650; font-size: 1.1rem;">{p.name}</h4>
+                    <p style="color: var(--mt-text-muted); font-size: 0.85rem; margin: 0;">Speaker ID: {p.speaker_id}</p>
+                </div>
+            </div>
+            <div style="font-size: 0.95rem; margin-top: var(--mt-space-md);">
+                <strong style="color: var(--mt-text); display: block; margin-bottom: 8px;">Responsibilities:</strong>
                 <div style="margin-top: 0.5rem; padding-left: 0.5rem;">
                     {resp_html}
                 </div>

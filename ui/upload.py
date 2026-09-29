@@ -32,12 +32,12 @@ def render_upload_page():
                 <div class="upload-ready-card-marker"></div>
                 <style>
                 div[data-testid="stVerticalBlock"]:has(.upload-ready-card-marker):not(:has(div[data-testid="stVerticalBlock"]:has(.upload-ready-card-marker))) {{
-                    background: var(--surface) !important;
-                    border-radius: 20px !important;
-                    padding: 2rem !important;
-                    box-shadow: var(--shadow-soft) !important;
-                    border: 1px solid #E2E8F0 !important;
-                    margin-bottom: 2rem !important;
+                    background: var(--mt-surface) !important;
+                    border-radius: var(--mt-radius-xl) !important;
+                    padding: var(--mt-space-2xl) !important;
+                    box-shadow: var(--mt-shadow-soft) !important;
+                    border: 1px solid var(--mt-border) !important;
+                    margin-bottom: var(--mt-space-2xl) !important;
                     text-align: center !important;
                 }}
                 .upload-ready-card-marker {{ display: none; }}
@@ -45,13 +45,13 @@ def render_upload_page():
             """, unsafe_allow_html=True)
             
             st.markdown(f"<div style='font-size: 3rem; margin-bottom: 1rem;'>📄</div>", unsafe_allow_html=True)
-            st.markdown(f"<h3 style='margin-bottom: 0.5rem;'>{metadata.get('filename', 'Unknown File')}</h3>", unsafe_allow_html=True)
+            st.markdown(f"<h3 style='margin-bottom: 0.5rem; color: var(--mt-text); font-weight: 650;'>{metadata.get('filename', 'Unknown File')}</h3>", unsafe_allow_html=True)
             
             st.markdown(f"""
-            <div style="display: flex; justify-content: center; gap: 2rem; color: var(--text-muted); margin-bottom: 2rem;">
-                <span>📦 {metadata.get('size_mb', '0')} MB</span>
-                <span>⏱️ {metadata.get('duration', 'Unknown')}</span>
-                <span>⚙️ {metadata.get('format', 'Unknown').upper()}</span>
+            <div style="display: flex; justify-content: center; gap: 2rem; color: var(--mt-text-secondary); margin-bottom: 2rem;">
+                <span style="display: flex; align-items: center; gap: 6px;"><span style="color: var(--mt-primary);">📦</span> {metadata.get('size_mb', '0')} MB</span>
+                <span style="display: flex; align-items: center; gap: 6px;"><span style="color: var(--mt-primary);">⏱️</span> {metadata.get('duration', 'Unknown')}</span>
+                <span style="display: flex; align-items: center; gap: 6px;"><span style="color: var(--mt-primary);">⚙️</span> {metadata.get('format', 'Unknown').upper()}</span>
             </div>
             """, unsafe_allow_html=True)
             
@@ -61,7 +61,7 @@ def render_upload_page():
             existing_meeting = get_meeting_by_hash(db, file_hash) if file_hash else None
             
             if existing_meeting and existing_meeting.processing_status == "Completed":
-                st.markdown("<span class='badge badge-completed' style='margin-bottom: 2rem;'>✓ Already Processed</span>", unsafe_allow_html=True)
+                st.markdown("<span class='badge badge-completed' style='margin-bottom: 2rem; box-shadow: var(--mt-shadow-soft);'>✓ Already Processed</span>", unsafe_allow_html=True)
                 st.info("This meeting has already been analyzed. You can view the results directly.")
                 
                 col_spacer1, col1, col2, col_spacer2 = st.columns([1, 2, 2, 1])
@@ -77,7 +77,7 @@ def render_upload_page():
                         st.session_state['current_page'] = "Meeting Results"
                         st.rerun()
             else:
-                st.markdown("<span class='badge badge-completed' style='margin-bottom: 2rem;'>✓ Validated & Ready</span>", unsafe_allow_html=True)
+                st.markdown("<span class='badge badge-completed' style='margin-bottom: 2rem; box-shadow: var(--mt-shadow-soft);'>✓ Validated & Ready</span>", unsafe_allow_html=True)
                 
                 col_spacer1, col1, col2, col_spacer2 = st.columns([1, 2, 2, 1])
                 with col1:
@@ -102,12 +102,12 @@ def render_upload_page():
             <div class="uploader-card-marker"></div>
             <style>
             div[data-testid="stVerticalBlock"]:has(.uploader-card-marker):not(:has(div[data-testid="stVerticalBlock"]:has(.uploader-card-marker))) {{
-                background: var(--surface) !important;
-                border-radius: 20px !important;
-                padding: 2rem !important;
-                box-shadow: var(--shadow-soft) !important;
-                border: 1px solid #E2E8F0 !important;
-                margin-bottom: 2rem !important;
+                background: var(--mt-surface) !important;
+                border-radius: var(--mt-radius-xl) !important;
+                padding: var(--mt-space-2xl) !important;
+                box-shadow: var(--mt-shadow-soft) !important;
+                border: 1px solid var(--mt-border) !important;
+                margin-bottom: var(--mt-space-2xl) !important;
             }}
             .uploader-card-marker {{ display: none; }}
             </style>

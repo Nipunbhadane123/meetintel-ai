@@ -36,3 +36,9 @@ class MeetingAnalyzer:
         res = self.provider.ask_question(transcript_text, question, insights)
         logger.info(f"Ask AI completed in {time.time() - start:.2f}s")
         return res
+
+    def rag_ask(self, question: str, meeting_id: str = None) -> dict:
+        """Ask a question using RAG over the knowledge repository."""
+        from ai.rag import RAGService
+        service = RAGService()
+        return service.ask(question, meeting_id)

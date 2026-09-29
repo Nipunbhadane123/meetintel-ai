@@ -68,12 +68,19 @@ def main():
         
         # Display Header
         st.markdown(f"""
-            <div class="page-title-container" style="display: flex; justify-content: space-between; align-items: flex-end;">
-                <div>
-                    <h2 class="page-title">📄 {meeting.title}</h2>
-                    <p class="page-subtitle">{subtitle}</p>
+            <div style="background: var(--mt-surface); border: 1px solid var(--mt-border); border-radius: var(--mt-radius-xl); padding: var(--mt-space-xl); margin-bottom: var(--mt-space-xl); box-shadow: var(--mt-shadow-soft); position: relative; overflow: hidden;">
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: var(--mt-grad-primary);"></div>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; position: relative; z-index: 1;">
+                    <div>
+                        <h2 style="font-size: 2.2rem; font-weight: 750; color: var(--mt-text); margin: 0 0 12px 0; letter-spacing: -0.02em;">{meeting.title}</h2>
+                        <div style="display: flex; gap: 16px; color: var(--mt-text-secondary); font-size: 0.95rem; font-weight: 500;">
+                            <span style="display: flex; align-items: center; gap: 6px;"><span style="color: var(--mt-primary);">📅</span> {meeting.date.strftime('%b %d, %Y')}</span>
+                            <span style="display: flex; align-items: center; gap: 6px;"><span style="color: var(--mt-primary);">⏱️</span> {duration_str}</span>
+                            <span style="display: flex; align-items: center; gap: 6px;"><span style="color: var(--mt-primary);">👥</span> {meeting.speaker_count} Speakers</span>
+                        </div>
+                    </div>
+                    <span class="badge badge-completed" style="font-size: 0.85rem; padding: 6px 12px; box-shadow: var(--mt-shadow-soft);">✓ {meeting.processing_status}</span>
                 </div>
-                <span class="badge badge-completed" style="font-size: 0.9rem;">✓ {meeting.processing_status}</span>
             </div>
         """, unsafe_allow_html=True)
         
@@ -114,6 +121,10 @@ def main():
     elif page == "Transcripts":
         from ui.transcripts_list import render_transcripts_list
         render_transcripts_list()
+        
+    elif page == "Knowledge Search":
+        from ui.knowledge_search import render_knowledge_search_page
+        render_knowledge_search_page()
         
     elif page == "Settings":
         from ui.settings import render_settings_page

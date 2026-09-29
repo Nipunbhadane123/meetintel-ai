@@ -14,12 +14,12 @@ def render_transcript_tab(meeting_id):
                 <div class="transcript-view-card-marker"></div>
                 <style>
                 div[data-testid="stVerticalBlock"]:has(.transcript-view-card-marker):not(:has(div[data-testid="stVerticalBlock"]:has(.transcript-view-card-marker))) {{
-                    background: var(--surface) !important;
-                    border-radius: 20px !important;
-                    padding: 2rem !important;
-                    box-shadow: var(--shadow-soft) !important;
-                    border: 1px solid #E2E8F0 !important;
-                    margin-bottom: 2rem !important;
+                    background: var(--mt-surface) !important;
+                    border-radius: var(--mt-radius-xl) !important;
+                    padding: var(--mt-space-2xl) !important;
+                    box-shadow: var(--mt-shadow-soft) !important;
+                    border: 1px solid var(--mt-border) !important;
+                    margin-bottom: var(--mt-space-2xl) !important;
                 }}
                 .transcript-view-card-marker {{ display: none; }}
                 </style>
@@ -32,12 +32,12 @@ def render_transcript_tab(meeting_id):
             <div class="transcript-view-card-marker"></div>
             <style>
             div[data-testid="stVerticalBlock"]:has(.transcript-view-card-marker):not(:has(div[data-testid="stVerticalBlock"]:has(.transcript-view-card-marker))) {{
-                background: var(--surface) !important;
-                border-radius: 20px !important;
-                padding: 2rem !important;
-                box-shadow: var(--shadow-soft) !important;
-                border: 1px solid #E2E8F0 !important;
-                margin-bottom: 2rem !important;
+                background: var(--mt-surface) !important;
+                border-radius: var(--mt-radius-xl) !important;
+                padding: var(--mt-space-2xl) !important;
+                box-shadow: var(--mt-shadow-soft) !important;
+                border: 1px solid var(--mt-border) !important;
+                margin-bottom: var(--mt-space-2xl) !important;
             }}
             .transcript-view-card-marker {{ display: none; }}
             </style>
@@ -55,7 +55,7 @@ def render_transcript_tab(meeting_id):
             type="secondary"
         )
         
-        st.markdown("<hr style='border: 0; border-top: 1px solid #E2E8F0; margin: 1.5rem 0;'>", unsafe_allow_html=True)
+        st.markdown("<hr style='border: 0; border-top: 1px solid var(--mt-border); margin: var(--mt-space-xl) 0;'>", unsafe_allow_html=True)
         
         for seg in segments:
             if search and search.lower() not in seg.text.lower():

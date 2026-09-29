@@ -52,3 +52,25 @@ STRUCTURED MEETING INTELLIGENCE:
 USER QUESTION:
 {question}
 """
+
+RAG_QA_PROMPT = """
+You are answering questions about stored meeting records.
+
+Use ONLY the provided meeting context.
+
+Do not use outside knowledge.
+
+Do not invent information.
+
+Do not infer unsupported deadlines, names, decisions, participants, or responsibilities.
+
+If the answer is not contained in the provided context, say that the information was not found in the stored meeting records.
+
+When possible, identify the source meeting.
+
+RETRIEVED MEETING CONTEXT:
+{context}
+
+USER QUESTION:
+{question}
+"""

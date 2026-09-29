@@ -16,22 +16,22 @@ def render_action_items_tab(meeting_id):
         
     for item in items:
         # Determine badge color for priority
-        priority_color = "var(--primary)" # Default
+        priority_color = "var(--mt-primary)" # Default
         if "high" in (item.priority or "").lower():
-            priority_color = "var(--error)"
+            priority_color = "var(--mt-error)"
         elif "low" in (item.priority or "").lower():
-            priority_color = "var(--success)"
+            priority_color = "var(--mt-success)"
             
         html = f"""
-        <div class="saas-card" style="border-left: 4px solid {priority_color}; padding: 1.25rem 1.5rem; margin-bottom: 1rem;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
-                <h4 style="color: var(--text-main); margin: 0; font-size: 1.05rem; font-weight: 600;">{item.task}</h4>
+        <div class="saas-card" style="border-left: 4px solid {priority_color}; padding: var(--mt-space-lg) var(--mt-space-xl); margin-bottom: var(--mt-space-md);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--mt-space-sm);">
+                <h4 style="color: var(--mt-text); margin: 0; font-size: 1.1rem; font-weight: 650;">{item.task}</h4>
                 <span class="badge badge-pending" style="font-size: 0.75rem;">{item.status}</span>
             </div>
-            <div style="display: flex; gap: 1.5rem; color: var(--text-muted); font-size: 0.85rem; margin-top: 1rem;">
-                <span>👤 Assigned To: <strong style="color: var(--text-main);">{item.assigned_to or 'Unassigned'}</strong></span>
-                <span>📅 Deadline: <strong style="color: var(--text-main);">{item.deadline or 'None'}</strong></span>
-                <span>📌 Priority: <strong style="color: {priority_color};">{item.priority or 'Normal'}</strong></span>
+            <div style="display: flex; gap: var(--mt-space-xl); color: var(--mt-text-secondary); font-size: 0.9rem; margin-top: var(--mt-space-md);">
+                <span style="display: flex; align-items: center; gap: 6px;">👤 Assigned To: <strong style="color: var(--mt-text);">{item.assigned_to or 'Unassigned'}</strong></span>
+                <span style="display: flex; align-items: center; gap: 6px;">📅 Deadline: <strong style="color: var(--mt-text);">{item.deadline or 'None'}</strong></span>
+                <span style="display: flex; align-items: center; gap: 6px;">📌 Priority: <strong style="color: {priority_color};">{item.priority or 'Normal'}</strong></span>
             </div>
         </div>
         """

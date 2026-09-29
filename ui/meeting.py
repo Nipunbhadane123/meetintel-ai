@@ -142,6 +142,14 @@ def render_processing_page():
             db.commit()
             db_time = time.time() - t0
             
+            # 9. Index into Knowledge Base
+            t0 = time.time()
+            progress_bar.progress(95, text="Indexing into Knowledge Base...")
+            status_box.info("Generating embeddings...")
+            from storage.knowledge import get_knowledge_repository
+            repo = get_knowledge_repository()
+            repo.index_meeting(meeting.id)
+            index_time = time.time() - t0            
             total_time = time.time() - total_start_time
             
             # Save metrics to session state to display later if needed
@@ -169,9 +177,9 @@ def render_processing_page():
         except Exception as e:
             progress_bar.progress(100, text="Error occurred")
             st.markdown(f"""
-            <div class="saas-card" style="border-left: 4px solid var(--error);">
-                <h3 style="color: var(--error); margin-top: 0;">Something went wrong</h3>
-                <p style="color: var(--text-muted); margin-bottom: 1rem;">We couldn't process this meeting.</p>
+            <div class="saas-card" style="border-left: 4px solid var(--mt-error);">
+                <h3 style="color: var(--mt-error); margin-top: 0;">Something went wrong</h3>
+                <p style="color: var(--mt-text-muted); margin-bottom: 1rem;">We couldn't process this meeting.</p>
                 <div style="background: #F1F5F9; padding: 1rem; border-radius: 8px; font-family: monospace; font-size: 0.8rem; margin-bottom: 1rem;">
                     {str(e)}
                 </div>

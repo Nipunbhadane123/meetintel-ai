@@ -88,19 +88,30 @@ def render_mom_tab(meeting):
             <div class="mom-card-marker"></div>
             <style>
             div[data-testid="stVerticalBlock"]:has(.mom-card-marker):not(:has(div[data-testid="stVerticalBlock"]:has(.mom-card-marker))) {{
-                background: var(--surface) !important;
-                border-radius: 20px !important;
-                padding: 1.5rem !important;
-                box-shadow: var(--shadow-soft) !important;
-                border: 1px solid #E2E8F0 !important;
-                margin-bottom: 2rem !important;
+                background: var(--mt-surface) !important;
+                border-radius: var(--mt-radius-xl) !important;
+                padding: var(--mt-space-xl) !important;
+                box-shadow: var(--mt-shadow-soft) !important;
+                border: 1px solid var(--mt-border) !important;
+                margin-bottom: var(--mt-space-2xl) !important;
+            }}
+            div[data-testid="stVerticalBlock"]:has(.mom-card-marker) textarea {{
+                font-family: 'Courier New', Courier, monospace !important;
+                background: var(--mt-bg) !important;
+                border: 1px solid var(--mt-border) !important;
+                border-radius: var(--mt-radius-md) !important;
+                padding: var(--mt-space-lg) !important;
+                font-size: 0.95rem !important;
+                line-height: 1.6 !important;
+                color: var(--mt-text) !important;
+                resize: none !important;
             }}
             .mom-card-marker {{ display: none; }}
             </style>
         """, unsafe_allow_html=True)
-        st.text_area("MoM Preview", mom_text, height=400, label_visibility="collapsed")
+        st.text_area("MoM Preview", mom_text, height=450, label_visibility="collapsed")
     
-    st.markdown("<h4 style='color: var(--text-main); margin-bottom: 1rem;'>↓ Export Options</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='color: var(--mt-text); margin-bottom: var(--mt-space-lg); font-weight: 650; font-size: 1.25rem;'>↓ Export Options</h4>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns(3)
     
     with col1:
@@ -115,28 +126,44 @@ def render_mom_tab(meeting):
         
     with col2:
         pdf_path = REPORTS_DIR / f"MoM_{meeting.id}.pdf"
-        if not pdf_path.exists() or True: # Regenerate for latest data
-            generate_pdf(meeting, str(pdf_path))
-        with open(pdf_path, "rb") as f:
-            st.download_button(
-                label="PDF Document",
-                data=f,
-                file_name=f"MoM_{meeting.id}.pdf",
-                mime="application/pdf",
-                use_container_width=True,
-                type="primary"
-            )
+        if not pdf_path.exists():
+            try:
+                generate_pdf(meeting, str(pdf_path))
+            except Exception as e:
+                st.error(f"Failed to generate PDF: {e}")
+                
+        if pdf_path.exists():
+            try:
+                pdf_bytes = pdf_path.read_bytes()
+                st.download_button(
+                    label="PDF Document",
+                    data=pdf_bytes,
+                    file_name=f"MoM_{meeting.id}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                    type="primary"
+                )
+            except Exception as e:
+                st.error("Unable to prepare the PDF for download.")
             
     with col3:
         docx_path = REPORTS_DIR / f"MoM_{meeting.id}.docx"
-        if not docx_path.exists() or True:
-            generate_docx(meeting, str(docx_path))
-        with open(docx_path, "rb") as f:
-            st.download_button(
-                label="Word Document",
-                data=f,
-                file_name=f"MoM_{meeting.id}.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                use_container_width=True,
-                type="primary"
-            )
+        if not docx_path.exists():
+            try:
+                generate_docx(meeting, str(docx_path))
+            except Exception as e:
+                st.error(f"Failed to generate DOCX: {e}")
+                
+        if docx_path.exists():
+            try:
+                docx_bytes = docx_path.read_bytes()
+                st.download_button(
+                    label="Word Document",
+                    data=docx_bytes,
+                    file_name=f"MoM_{meeting.id}.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    use_container_width=True,
+                    type="primary"
+                )
+            except Exception as e:
+                st.error("Unable to prepare the DOCX for download.")

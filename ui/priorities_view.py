@@ -14,17 +14,17 @@ def render_priorities_tab(meeting_id):
         return
         
     for p in priorities:
-        priority_color = "var(--primary)"
+        priority_color = "var(--mt-primary)"
         if "high" in p.priority_level.lower():
-            priority_color = "var(--error)"
+            priority_color = "var(--mt-error)"
         elif "low" in p.priority_level.lower():
-            priority_color = "var(--success)"
+            priority_color = "var(--mt-success)"
             
         html = f"""
-        <div class="saas-card" style="border-left: 4px solid {priority_color}; margin-bottom: 1rem;">
+        <div class="saas-card" style="border-left: 4px solid {priority_color}; margin-bottom: var(--mt-space-md); padding: var(--mt-space-lg);">
             <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h4 style="color: var(--text-main); margin: 0;">{p.item}</h4>
-                <span class="badge" style="background: {priority_color}20; color: {priority_color}; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600;">{p.priority_level}</span>
+                <h4 style="color: var(--mt-text); margin: 0; font-weight: 650; font-size: 1.1rem;">{p.item}</h4>
+                <span class="badge" style="background: rgba(0,0,0,0.04); color: {priority_color}; padding: 6px 12px; border-radius: var(--mt-radius-sm); font-size: 0.85rem; font-weight: 600; border: 1px solid rgba(0,0,0,0.05);">{p.priority_level}</span>
             </div>
         </div>
         """

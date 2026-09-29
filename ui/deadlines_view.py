@@ -16,14 +16,14 @@ def render_deadlines_tab(meeting_id):
         
     for dl in deadlines:
         html = f"""
-        <div class="saas-card" style="border-left: 4px solid var(--primary); margin-bottom: 1rem;">
+        <div class="saas-card" style="border-left: 4px solid var(--mt-primary); margin-bottom: var(--mt-space-md); padding: var(--mt-space-lg);">
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                 <div>
-                    <h4 style="color: var(--text-main); margin-bottom: 0.25rem;">{dl.description}</h4>
-                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0;">Task: {dl.related_task}</p>
+                    <h4 style="color: var(--mt-text); margin-bottom: 8px; margin-top: 0; font-weight: 650; font-size: 1.1rem;">{dl.description}</h4>
+                    <p style="color: var(--mt-text-secondary); font-size: 0.95rem; margin-bottom: 0;">Task: {dl.related_task}</p>
                 </div>
                 <div style="text-align: right;">
-                    <span class="badge badge-primary" style="font-size: 0.85rem;">{dl.date}</span>
+                    <span class="badge badge-processing" style="font-size: 0.85rem; padding: 6px 12px;">{dl.date}</span>
                 </div>
             </div>
         </div>
