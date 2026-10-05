@@ -33,8 +33,20 @@ def render_sidebar_navigation():
             st.session_state['current_page'] = item["name"]
             st.rerun()
             
-    st.sidebar.markdown("""
-        <div style="margin-top: auto; padding-top: 32px; padding-left: 12px;">
-            <div style="font-size: 0.75rem; color: var(--mt-text-muted); font-weight: 500;">MeetIntel AI v2.0</div>
+    st.sidebar.markdown(f"""
+        <div style="margin-top: auto; padding-top: 32px; padding-left: 20px; padding-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--mt-grad-primary); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 0.8rem;">
+                    {st.session_state.get('username', 'U')[0].upper()}
+                </div>
+                <div>
+                    <div style="font-size: 0.85rem; color: var(--mt-text); font-weight: 600; line-height: 1.2;">{st.session_state.get('username', 'User')}</div>
+                    <div style="font-size: 0.75rem; color: var(--mt-text-muted); font-weight: 500; margin-top: 2px;">MeetIntel AI v2.0</div>
+                </div>
+            </div>
         </div>
     """, unsafe_allow_html=True)
+    
+    if st.sidebar.button("Log out", key="nav_logout", use_container_width=True):
+        from ui.auth import logout
+        logout()

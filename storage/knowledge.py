@@ -45,6 +45,7 @@ class KnowledgeRepository:
                     documents.append(chunk["text"])
                     metadatas.append({
                         "meeting_id": meeting_id,
+                        "user_id": meeting.user_id,
                         "meeting_title": meeting.title or "Untitled",
                         "meeting_date": str(meeting.date) if meeting.date else "",
                         "content_type": "transcript",
@@ -62,6 +63,7 @@ class KnowledgeRepository:
                     documents.append(chunk["text"])
                     metadatas.append({
                         "meeting_id": meeting_id,
+                        "user_id": meeting.user_id,
                         "meeting_title": meeting.title or "Untitled",
                         "meeting_date": str(meeting.date) if meeting.date else "",
                         "content_type": "summary",
@@ -87,6 +89,7 @@ class KnowledgeRepository:
                     documents.append(text)
                     metadatas.append({
                         "meeting_id": meeting_id,
+                        "user_id": meeting.user_id,
                         "meeting_title": meeting.title or "Untitled",
                         "meeting_date": str(meeting.date) if meeting.date else "",
                         "content_type": "insight",
@@ -107,6 +110,7 @@ class KnowledgeRepository:
                 documents.append(text)
                 metadatas.append({
                     "meeting_id": meeting_id,
+                    "user_id": meeting.user_id,
                     "meeting_title": meeting.title or "Untitled",
                     "meeting_date": str(meeting.date) if meeting.date else "",
                     "content_type": "decision",
@@ -120,6 +124,7 @@ class KnowledgeRepository:
                 documents.append(text)
                 metadatas.append({
                     "meeting_id": meeting_id,
+                    "user_id": meeting.user_id,
                     "meeting_title": meeting.title or "Untitled",
                     "meeting_date": str(meeting.date) if meeting.date else "",
                     "content_type": "action_item",
@@ -133,6 +138,7 @@ class KnowledgeRepository:
                 documents.append(text)
                 metadatas.append({
                     "meeting_id": meeting_id,
+                    "user_id": meeting.user_id,
                     "meeting_title": meeting.title or "Untitled",
                     "meeting_date": str(meeting.date) if meeting.date else "",
                     "content_type": "participant",
@@ -146,6 +152,7 @@ class KnowledgeRepository:
                 documents.append(text)
                 metadatas.append({
                     "meeting_id": meeting_id,
+                    "user_id": meeting.user_id,
                     "meeting_title": meeting.title or "Untitled",
                     "meeting_date": str(meeting.date) if meeting.date else "",
                     "content_type": "deadline",
@@ -180,7 +187,7 @@ class KnowledgeRepository:
             logger.error(f"Failed to delete meeting {meeting_id} from vector store: {e}")
             return False
             
-    def semantic_search(self, query: str, meeting_id: Optional[str] = None, top_k: int = 5) -> Dict[str, Any]:
+    def semantic_search(self, query: str, user_id: Optional[str] = None, meeting_id: Optional[str] = None, top_k: int = 5) -> Dict[str, Any]:
         """Performs a semantic search across meetings."""
         start_time = time.time()
         
@@ -189,7 +196,7 @@ class KnowledgeRepository:
         embedding_time = time.time()
         
         # 2. Vector search
-        results = self.vector_store.search(query_embedding, meeting_id=meeting_id, top_k=top_k)
+        results = self.vector_store.search(query_embedding, user_id=user_id, meeting_id=meeting_id, top_k=top_k)
         search_time = time.time()
         
         total_time_ms = int((search_time - start_time) * 1000)

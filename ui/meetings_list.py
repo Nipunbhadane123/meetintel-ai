@@ -6,14 +6,25 @@ from ui.components import render_meeting_card, empty_state
 
 def render_meetings_list():
     st.markdown("""
-        <div class="page-title-container" style="margin-bottom: var(--mt-space-xl);">
-            <h2 class="page-title" style="color: var(--mt-text); font-weight: 750; font-size: 2.2rem; margin: 0 0 8px 0; letter-spacing: -0.02em;"><span style="color: var(--mt-primary);">✤</span> Meeting Library</h2>
-            <p class="page-subtitle" style="color: var(--mt-text-secondary); font-size: 1.1rem; margin: 0;">Browse and search your processed meetings.</p>
+        <div class="page-title-container">
+            <h2 class="page-title"><span style="color: var(--mt-primary);">✤</span> Meeting Library</h2>
+            <p class="page-subtitle">Browse and search your processed meetings.</p>
         </div>
     """, unsafe_allow_html=True)
     
     db = SessionLocal()
-    meetings = get_all_meetings(db)
+    user_id = st.session_state.get('user_id')
+    
+    try:
+        meetings = get_all_meetings(db, user_id=user_id)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Meeting List DB Error: {e}")
+        st.error("Unable to load meetings right now. Please try again.")
+        if st.button("Retry"):
+            st.rerun()
+        db.close()
+        return
     
     if not meetings:
         empty_state("📭", "No meetings found", "Upload a meeting to see it here.")

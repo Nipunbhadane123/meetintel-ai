@@ -138,22 +138,34 @@ pip install -r requirements.txt
 
 ---
 
-### 8. API Keys Setup
-1. **Hugging Face**: Go to [huggingface.co](https://huggingface.co), create an account, go to Settings -> Access Tokens, and create a Read token. **You must also go to `pyannote/speaker-diarization-community-1` on Hugging Face and accept the user conditions.**
-2. **Google Gemini**: Go to [Google AI Studio](https://aistudio.google.com/), get an API key.
+### 8. Configure AI Providers (Primary & Fallback)
 
-Copy the example file:
-```bash
-cp .env.example .env
-```
-Open `.env` in a text editor and paste your keys:
-```env
-HUGGINGFACE_TOKEN=your_token_here
-GEMINI_API_KEY=your_key_here
-```
+MeetIntel AI supports **Gemini** as the primary intelligence provider and **OpenAI** as an automatic backup. This prevents the app from failing if one service hits a rate limit or goes down.
+
+1. **Create Gemini API key:** Go to [Google AI Studio](https://aistudio.google.com/) and create a free API key.
+2. **Create OpenAI API key:** Go to the [OpenAI Platform](https://platform.openai.com/api-keys) and create a key (requires billing setup).
+3. **Open .env:** Make sure you have copied `.env.example` to `.env`. Open `.env` in any text editor.
+4. **Paste keys:** Paste both keys into your `.env` file like this:
+   ```env
+   GEMINI_API_KEY=your_gemini_key_here
+   OPENAI_API_KEY=your_openai_key_here
+   ```
+5. **Start MeetIntel AI:** Run `streamlit run app.py` in your terminal.
+6. **Open Settings:** In the application sidebar, click **Settings**.
+7. **Test providers:** The settings page will display the health status of your AI providers.
+8. **Use Gemini as primary:** Ensure "Gemini" is selected as the AI Provider in the Settings menu.
+9. **OpenAI automatically acts as fallback:** You don't need to do anything else! If Gemini hits a quota limit or temporarily fails, the system will seamlessly switch to OpenAI to generate your meeting insights without breaking the application.
 
 ---
 
+### 8.5. Hugging Face Setup (Required for Speaker Diarization)
+1. **Hugging Face**: Go to [huggingface.co](https://huggingface.co), create an account, go to Settings -> Access Tokens, and create a Read token. **You must also go to `pyannote/speaker-diarization-community-1` on Hugging Face and accept the user conditions.**
+2. Copy the token into your `.env`:
+   ```env
+   HUGGINGFACE_TOKEN=your_token_here
+   ```
+
+---
 ### 9. Health Check
 Run the diagnostic script to ensure everything is perfect:
 ```bash

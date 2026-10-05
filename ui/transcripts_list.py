@@ -13,7 +13,18 @@ def render_transcripts_list():
     """, unsafe_allow_html=True)
     
     db = SessionLocal()
-    meetings = get_all_meetings(db)
+    user_id = st.session_state.get('user_id')
+    
+    try:
+        meetings = get_all_meetings(db, user_id=user_id)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Transcripts DB Error: {e}")
+        st.error("Unable to load transcripts right now. Please try again.")
+        if st.button("Retry"):
+            st.rerun()
+        db.close()
+        return
     
     if not meetings:
         empty_state("📭", "No transcripts found", "Upload a meeting to generate transcripts.")

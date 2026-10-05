@@ -11,30 +11,60 @@ def render_dashboard():
     greeting = "Good morning" if current_hour < 12 else "Good afternoon" if current_hour < 18 else "Good evening"
     
     st.markdown(f"""
-        <div style="position: relative; overflow: hidden; background: var(--mt-surface); border: 1px solid var(--mt-border); border-radius: var(--mt-radius-xl); padding: var(--mt-space-2xl); margin-bottom: var(--mt-space-xl); box-shadow: var(--mt-shadow-soft); display: flex; justify-content: space-between; align-items: center;">
-            <div style="position: absolute; top: -50px; right: -50px; width: 250px; height: 250px; background: radial-gradient(circle, rgba(109,61,245,0.15) 0%, transparent 70%); border-radius: 50%; filter: blur(30px); z-index: 0;"></div>
-            <div style="position: absolute; bottom: -30px; left: 10%; width: 150px; height: 150px; background: radial-gradient(circle, rgba(79,70,229,0.1) 0%, transparent 70%); border-radius: 50%; filter: blur(20px); z-index: 0;"></div>
+        <div style="position: relative; overflow: hidden; background: var(--mt-surface); border: 1px solid var(--mt-border); border-radius: var(--mt-radius-xl); padding: var(--mt-space-2xl); margin-bottom: var(--mt-space-xl); box-shadow: var(--mt-shadow-card); display: flex; justify-content: space-between; align-items: center;">
+            <div style="position: absolute; top: -100px; right: -50px; width: 300px; height: 300px; background: radial-gradient(circle, rgba(108,76,241,0.12) 0%, transparent 70%); border-radius: 50%; filter: blur(40px); z-index: 0;"></div>
+            <div style="position: absolute; bottom: -50px; left: 5%; width: 200px; height: 200px; background: radial-gradient(circle, rgba(6,182,212,0.08) 0%, transparent 70%); border-radius: 50%; filter: blur(30px); z-index: 0;"></div>
             <div style="z-index: 1;">
-                <h1 style="font-size: 2.2rem; font-weight: 750; color: var(--mt-text); margin-bottom: var(--mt-space-xs); letter-spacing: -0.02em;">{greeting},<br/>welcome to MeetIntel AI</h1>
-                <p style="color: var(--mt-text-secondary); font-size: 1.1rem; margin: 0; font-weight: 500;">Turn every meeting into searchable, actionable knowledge.</p>
+                <h1 style="font-size: 2.4rem; font-weight: 700; color: var(--mt-text); margin-bottom: 8px; letter-spacing: -0.02em;">{greeting},<br/>welcome to MeetIntel AI</h1>
+                <p style="color: var(--mt-text-secondary); font-size: 1.1rem; margin: 0; font-weight: 400; line-height: 1.5;">Turn every meeting into searchable, actionable knowledge.</p>
             </div>
-            <div style="z-index: 1; font-size: 3.5rem; background: var(--mt-grad-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0px 8px 16px rgba(109,61,245,0.2));">✦</div>
+            <div style="z-index: 1; font-size: 4rem; background: var(--mt-grad-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0px 8px 16px rgba(108,76,241,0.2)); opacity: 0.9;">✦</div>
         </div>
     """, unsafe_allow_html=True)
     
+    user_id = st.session_state.get('user_id')
     db = next(get_db())
-    meetings = get_all_meetings(db)
     
-    total_meetings = len(meetings)
-    total_action_items = db.query(ActionItem).count()
-    
-    # Get indexed knowledge count
-    from storage.knowledge import get_knowledge_repository
     try:
-        repo = get_knowledge_repository()
-        total_vectors = repo.vector_store.collection.count()
-    except Exception:
-        total_vectors = 0
+        meetings = get_all_meetings(db, user_id=user_id)
+        total_meetings = len(meetings)
+        
+        # Total action items for this user's meetings
+        meeting_ids = [m.id for m in meetings]
+        if meeting_ids:
+            total_action_items = db.query(ActionItem).filter(ActionItem.meeting_id.in_(meeting_ids)).count()
+            # Get upcoming deadlines
+            from storage.models import Deadline
+            upcoming_deadlines = db.query(Deadline).filter(Deadline.meeting_id.in_(meeting_ids)).limit(3).all()
+        else:
+            total_action_items = 0
+            upcoming_deadlines = []
+            
+        # Get indexed knowledge count
+        from storage.knowledge import get_knowledge_repository
+        try:
+            repo = get_knowledge_repository()
+            # Must isolate by user_id to prevent leaking global knowledge sizes
+            if user_id:
+                results = repo.vector_store.collection.get(where={"user_id": user_id}, include=[])
+                total_vectors = len(results["ids"])
+            else:
+                total_vectors = 0
+        except Exception:
+            total_vectors = 0
+            
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Dashboard Database Error: {e}")
+        st.markdown(f"""
+        <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid var(--mt-error); border-radius: var(--mt-radius-md); padding: 16px; margin-bottom: 24px;">
+            <h3 style="color: var(--mt-error); margin-top: 0; margin-bottom: 8px;">Database Connection Error</h3>
+            <p style="color: var(--mt-error); margin-bottom: 16px;">Unable to load meetings right now. Please try again.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("Retry", key="dash_retry", type="primary"):
+            st.rerun()
+        return
     
     # Render Metric Cards
     col1, col2, col3, col4 = st.columns(4)
@@ -57,8 +87,20 @@ def render_dashboard():
         if not meetings:
             empty_state("📭", "No meetings yet", "Upload your first meeting to start generating intelligence.")
         else:
-            for m in meetings[:4]: # Show top 4 recent
+            for m in meetings[:3]: # Show top 3 recent
                 render_meeting_card(m, button_key=f"dash_btn_{m.id}")
+                
+        st.markdown("<h3 style='font-size: 1.25rem; font-weight: 650; color: var(--mt-text); margin-top: var(--mt-space-xl); margin-bottom: var(--mt-space-md);'>Upcoming Deadlines</h3>", unsafe_allow_html=True)
+        if not upcoming_deadlines:
+            st.info("No upcoming deadlines.")
+        else:
+            for dl in upcoming_deadlines:
+                st.markdown(f"""
+                <div style="background: var(--mt-surface); border: 1px solid var(--mt-border); border-radius: var(--mt-radius-md); padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between;">
+                    <div><strong>{dl.description}</strong><br/><small style="color: var(--mt-text-secondary);">{dl.related_task}</small></div>
+                    <div style="color: var(--mt-primary); font-weight: 600;">{dl.date}</div>
+                </div>
+                """, unsafe_allow_html=True)
                 
     with right_col:
         st.markdown("<h3 style='font-size: 1.25rem; font-weight: 650; color: var(--mt-text); margin-bottom: var(--mt-space-md);'>Quick Actions</h3>", unsafe_allow_html=True)

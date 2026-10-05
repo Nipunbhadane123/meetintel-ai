@@ -7,7 +7,7 @@ from api.main import app
 
 client = TestClient(app)
 API_KEY = "dev-secret-key"
-HEADERS = {"X-API-Key": API_KEY}
+HEADERS = {"X-API-Key": API_KEY, "x-user-id": "test-user-id"}
 
 def test_list_meetings():
     response = client.get("/meetings", headers=HEADERS)

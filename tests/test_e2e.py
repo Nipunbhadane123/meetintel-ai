@@ -1,3 +1,5 @@
+from dotenv import load_dotenv
+load_dotenv()
 import pytest
 import os
 from ai.meeting_analyzer import MeetingAnalyzer

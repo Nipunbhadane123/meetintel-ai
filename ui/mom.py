@@ -112,11 +112,11 @@ def render_mom_tab(meeting):
         st.text_area("MoM Preview", mom_text, height=450, label_visibility="collapsed")
     
     st.markdown("<h4 style='color: var(--mt-text); margin-bottom: var(--mt-space-lg); font-weight: 650; font-size: 1.25rem;'>↓ Export Options</h4>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     
     with col1:
         st.download_button(
-            label="TXT Document",
+            label="TXT",
             data=mom_text,
             file_name=f"MoM_{meeting.id}.txt",
             mime="text/plain",
@@ -136,7 +136,7 @@ def render_mom_tab(meeting):
             try:
                 pdf_bytes = pdf_path.read_bytes()
                 st.download_button(
-                    label="PDF Document",
+                    label="PDF",
                     data=pdf_bytes,
                     file_name=f"MoM_{meeting.id}.pdf",
                     mime="application/pdf",
@@ -158,7 +158,7 @@ def render_mom_tab(meeting):
             try:
                 docx_bytes = docx_path.read_bytes()
                 st.download_button(
-                    label="Word Document",
+                    label="Word",
                     data=docx_bytes,
                     file_name=f"MoM_{meeting.id}.docx",
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -167,3 +167,18 @@ def render_mom_tab(meeting):
                 )
             except Exception as e:
                 st.error("Unable to prepare the DOCX for download.")
+
+    with col4:
+        try:
+            from reports.csv import generate_csv
+            csv_data = generate_csv(meeting)
+            st.download_button(
+                label="CSV",
+                data=csv_data.getvalue(),
+                file_name=f"MoM_{meeting.id}.csv",
+                mime="text/csv",
+                use_container_width=True,
+                type="primary"
+            )
+        except Exception as e:
+            st.error("Unable to prepare the CSV for download.")

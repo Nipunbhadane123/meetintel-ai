@@ -29,10 +29,27 @@ def render_processing_page():
     st.write("")
     st.markdown(f"**Processing:** `{metadata.get('filename', 'Unknown')}`")
     
+    # Pipeline UI Container
+    st.markdown("""
+        <div id="pipeline-ui" style="background: var(--mt-surface); border-radius: var(--mt-radius-xl); padding: var(--mt-space-xl); border: 1px solid var(--mt-border); box-shadow: var(--mt-shadow-card); margin-top: var(--mt-space-xl);">
+            <div style="display: flex; flex-direction: column; gap: var(--mt-space-md);">
+                <div id="step-audio" style="display: flex; align-items: center; gap: 12px; color: var(--mt-text-muted); font-weight: 500; font-size: 1rem;"><div style="width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--mt-border); display: flex; align-items: center; justify-content: center; font-size: 0.75rem;">1</div> Audio extraction</div>
+                <div id="step-whisper" style="display: flex; align-items: center; gap: 12px; color: var(--mt-text-muted); font-weight: 500; font-size: 1rem;"><div style="width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--mt-border); display: flex; align-items: center; justify-content: center; font-size: 0.75rem;">2</div> Transcription</div>
+                <div id="step-diarization" style="display: flex; align-items: center; gap: 12px; color: var(--mt-text-muted); font-weight: 500; font-size: 1rem;"><div style="width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--mt-border); display: flex; align-items: center; justify-content: center; font-size: 0.75rem;">3</div> Speaker identification</div>
+                <div id="step-ai" style="display: flex; align-items: center; gap: 12px; color: var(--mt-text-muted); font-weight: 500; font-size: 1rem;"><div style="width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--mt-border); display: flex; align-items: center; justify-content: center; font-size: 0.75rem;">4</div> AI analysis</div>
+                <div id="step-index" style="display: flex; align-items: center; gap: 12px; color: var(--mt-text-muted); font-weight: 500; font-size: 1rem;"><div style="width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--mt-border); display: flex; align-items: center; justify-content: center; font-size: 0.75rem;">5</div> Knowledge indexing</div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+    
     # Progress UI
     progress_bar = st.progress(0)
     status_box = st.empty()
     st.write("")
+    
+    def update_pipeline(step_id, status="processing"):
+        # Helper to update UI without raw HTML rewriting, just rely on streamlit native for now.
+        pass
     
     # Check if already processing
     if 'processing_started' not in st.session_state:
@@ -41,38 +58,38 @@ def render_processing_page():
         try:
             total_start_time = time.time()
             
-            # 1. DB Init
             db = next(get_db())
             duration = metadata.get('duration_sec', 0.0)
-            meeting = create_meeting(db, metadata.get('filename', 'Unknown'), duration, metadata.get('file_hash'))
+            user_id = st.session_state.get('user_id')
+            meeting = create_meeting(db, metadata.get('filename', 'Unknown'), user_id=user_id, duration=duration, file_hash=metadata.get('file_hash'))
             st.session_state['current_meeting_id'] = meeting.id
             
             # 2. Extract Audio
             t0 = time.time()
-            progress_bar.progress(10, text="Extracting and preprocessing audio with FFmpeg...")
-            status_box.info("Running FFmpeg...")
+            progress_bar.progress(10, text="1/5 • Audio extraction")
+            status_box.info("Preprocessing audio format...")
             processed_wav = process_audio(file_path)
             audio_time = time.time() - t0
             
             # 3. Whisper
             t0 = time.time()
-            progress_bar.progress(30, text="Transcribing with Whisper...")
-            status_box.info("Running Whisper (this may take a while)...")
+            progress_bar.progress(30, text="2/5 • Transcription")
+            status_box.info("Running AI Transcription (this may take a while)...")
             transcriber = WhisperTranscriber()
             whisper_segments = transcriber.transcribe(processed_wav)
             whisper_time = time.time() - t0
             
             # 4. Pyannote
             t0 = time.time()
-            progress_bar.progress(60, text="Detecting speakers with Pyannote...")
-            status_box.info("Running Speaker Diarization...")
+            progress_bar.progress(60, text="3/5 • Speaker identification")
+            status_box.info("Identifying distinct speakers...")
             diarizer = SpeakerDiarizer()
             speaker_segments = diarizer.diarize(processed_wav)
             diarization_time = time.time() - t0
             
             # 5. Alignment
             t0 = time.time()
-            progress_bar.progress(80, text="Aligning transcript and speakers...")
+            progress_bar.progress(80, text="Synchronizing data")
             aligned_segments = align_transcript_with_speakers(whisper_segments, speaker_segments)
             
             # 6. Format and Validate
@@ -87,8 +104,8 @@ def render_processing_page():
             
             # 8. AI Insights
             t0 = time.time()
-            progress_bar.progress(90, text="Generating AI Insights...")
-            status_box.info("Calling AI Provider...")
+            progress_bar.progress(90, text="4/5 • AI analysis")
+            status_box.info("Generating intelligent insights...")
             text_transcript = generate_text_transcript(clean_segments)
             
             analyzer = MeetingAnalyzer()
@@ -144,8 +161,8 @@ def render_processing_page():
             
             # 9. Index into Knowledge Base
             t0 = time.time()
-            progress_bar.progress(95, text="Indexing into Knowledge Base...")
-            status_box.info("Generating embeddings...")
+            progress_bar.progress(95, text="5/5 • Knowledge indexing")
+            status_box.info("Building semantic search vectors...")
             from storage.knowledge import get_knowledge_repository
             repo = get_knowledge_repository()
             repo.index_meeting(meeting.id)
@@ -178,11 +195,11 @@ def render_processing_page():
             progress_bar.progress(100, text="Error occurred")
             st.markdown(f"""
             <div class="saas-card" style="border-left: 4px solid var(--mt-error);">
-                <h3 style="color: var(--mt-error); margin-top: 0;">Something went wrong</h3>
-                <p style="color: var(--mt-text-muted); margin-bottom: 1rem;">We couldn't process this meeting.</p>
-                <div style="background: #F1F5F9; padding: 1rem; border-radius: 8px; font-family: monospace; font-size: 0.8rem; margin-bottom: 1rem;">
-                    {str(e)}
-                </div>
+                <h3 style="color: var(--mt-error); margin-top: 0; display: flex; align-items: center; gap: 8px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    Something went wrong
+                </h3>
+                <p style="color: var(--mt-text-secondary); font-size: 1rem; margin-bottom: 0;">We couldn't process this meeting right now. Please try again later.</p>
             </div>
             """, unsafe_allow_html=True)
             import logging
@@ -190,7 +207,7 @@ def render_processing_page():
             if 'current_meeting_id' in st.session_state:
                 update_meeting_status(next(get_db()), st.session_state['current_meeting_id'], "Failed")
             
-            if st.button("Retry", type="secondary"):
+            if st.button("Try again", type="primary"):
                 if 'processing_started' in st.session_state:
                     del st.session_state['processing_started']
                 st.session_state['current_page'] = "Dashboard"

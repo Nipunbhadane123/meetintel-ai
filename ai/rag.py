@@ -47,14 +47,14 @@ class RAGService:
         self.repo = get_knowledge_repository()
         self.provider = get_ai_provider()
 
-    def ask(self, question: str, meeting_id: Optional[str] = None) -> dict:
+    def ask(self, question: str, user_id: Optional[str] = None, meeting_id: Optional[str] = None) -> dict:
         logger.info(f"[RAG] Query received: {question}")
         start_time = time.time()
         
         mode = QueryRouter.classify(question)
         logger.info(f"[RAG] Query classification: {mode}")
         
-        search_results = self.retrieve(question, mode, meeting_id)
+        search_results = self.retrieve(question, mode, user_id, meeting_id)
         retrieval_time = time.time() - start_time
         
         chunks_retrieved = len(search_results.get("results", []))
@@ -105,76 +105,42 @@ class RAGService:
             }
         
         try:
-            logger.info("[RAG] Gemini request started")
+            logger.info("[RAG] AI provider request started")
             gen_start = time.time()
             
-            prompt = self._build_prompt(context_str, question)
+            validated_data = self.provider.rag_ask_question(context_str, question)
             
-            raw_response = self.provider._call_gemini_with_retry(prompt, RAGResponse)
+            answer = validated_data.get("answer", "")
+            llm_sources = validated_data.get("sources", [])
             
-            try:
-                parsed_json = json.loads(raw_response)
-                validated_data = RAGResponse(**parsed_json)
-                answer = validated_data.answer
-                llm_sources = [s.model_dump() for s in validated_data.sources]
-                
-                gen_time = time.time() - gen_start
-                logger.info("[RAG] Gemini request succeeded")
-                logger.info("[RAG] Sources validated")
-                return {
-                    "question": question,
-                    "answer": answer,
-                    "sources": llm_sources if llm_sources else sources,
-                    "retrieval_time_ms": int(retrieval_time * 1000),
-                    "generation_time_ms": int(gen_time * 1000),
-                    "status": "SUCCESS",
-                    "retrieval_success": True,
-                    "generation_success": True,
-                    "error_type": None,
-                    "deterministic": False
-                }
-            except Exception as e:
-                logger.error(f"[RAG] Error parsing Gemini JSON: {e}")
-                gen_time = time.time() - gen_start
-                return {
-                    "question": question,
-                    "answer": raw_response,
-                    "sources": sources,
-                    "retrieval_time_ms": int(retrieval_time * 1000),
-                    "generation_time_ms": int(gen_time * 1000),
-                    "status": "SUCCESS",
-                    "retrieval_success": True,
-                    "generation_success": True,
-                    "error_type": None,
-                    "deterministic": False
-                }
-                
-        except TransientAIError as e:
-            logger.error(f"[RAG] LLM temporarily unavailable: {e}")
+            gen_time = time.time() - gen_start
+            logger.info("[RAG] AI provider request succeeded")
+            logger.info("[RAG] Sources validated")
             return {
                 "question": question,
-                "answer": None,
-                "sources": sources,
+                "answer": answer,
+                "sources": llm_sources if llm_sources else sources,
                 "retrieval_time_ms": int(retrieval_time * 1000),
-                "generation_time_ms": 0,
-                "status": "LLM_UNAVAILABLE",
+                "generation_time_ms": int(gen_time * 1000),
+                "status": "SUCCESS",
                 "retrieval_success": True,
-                "generation_success": False,
-                "error_type": "temporary_llm_unavailable",
+                "generation_success": True,
+                "error_type": None,
                 "deterministic": False
             }
         except Exception as e:
-            logger.error(f"[RAG] Unexpected error during generation: {e}")
+            gen_time = time.time() - gen_start
+            logger.error(f"[RAG] Generation failed: {e}")
             return {
                 "question": question,
-                "answer": None,
+                "answer": "AI generation is temporarily unavailable. Please try again later.",
                 "sources": sources,
                 "retrieval_time_ms": int(retrieval_time * 1000),
-                "generation_time_ms": 0,
-                "status": "LLM_ERROR",
+                "generation_time_ms": int(gen_time * 1000),
+                "status": "ERROR",
                 "retrieval_success": True,
                 "generation_success": False,
-                "error_type": "unknown_error",
+                "error_type": "GENERATION_ERROR",
                 "deterministic": False
             }
 
@@ -198,13 +164,15 @@ USER QUESTION:
 {question}
 """
 
-    def retrieve(self, question: str, mode: str, meeting_id: Optional[str] = None) -> dict:
+    def retrieve(self, question: str, mode: str, user_id: Optional[str] = None, meeting_id: Optional[str] = None) -> dict:
         results = []
         db = SessionLocal()
         
         try:
             if mode == "DIRECT_DATABASE_LAST":
                 query = db.query(Meeting)
+                if user_id:
+                    query = query.filter(Meeting.user_id == user_id)
                 if meeting_id:
                     query = query.filter(Meeting.id == meeting_id)
                 m = query.order_by(Meeting.date.desc()).first()
@@ -212,6 +180,8 @@ USER QUESTION:
                     results.append(self._format_meeting_meta(m))
             elif mode == "DIRECT_DATABASE_LONGEST":
                 query = db.query(Meeting)
+                if user_id:
+                    query = query.filter(Meeting.user_id == user_id)
                 if meeting_id:
                     query = query.filter(Meeting.id == meeting_id)
                 m = query.order_by(Meeting.duration.desc()).first()
@@ -219,6 +189,8 @@ USER QUESTION:
                     results.append(self._format_meeting_meta(m))
             elif mode == "DIRECT_DATABASE_COUNT":
                 query = db.query(Meeting)
+                if user_id:
+                    query = query.filter(Meeting.user_id == user_id)
                 if meeting_id:
                     query = query.filter(Meeting.id == meeting_id)
                 count = query.count()
@@ -234,6 +206,8 @@ USER QUESTION:
                 })
             elif mode == "DIRECT_DATABASE_PARTICIPANTS":
                 query = db.query(Meeting)
+                if user_id:
+                    query = query.filter(Meeting.user_id == user_id)
                 if meeting_id:
                     query = query.filter(Meeting.id == meeting_id)
                 meetings = query.all()
@@ -252,6 +226,8 @@ USER QUESTION:
                         })
             elif mode in ["DIRECT_DATABASE_ACTIONS", "DIRECT_DATABASE_DECISIONS"]:
                 query = db.query(Meeting)
+                if user_id:
+                    query = query.filter(Meeting.user_id == user_id)
                 if meeting_id:
                     query = query.filter(Meeting.id == meeting_id)
                 meetings = query.order_by(Meeting.date.desc()).limit(10).all()
@@ -282,7 +258,7 @@ USER QUESTION:
                             })
             else:
                 top_k = int(os.getenv("RAG_TOP_K", "15"))
-                sem_results = self.repo.semantic_search(question, meeting_id=meeting_id, top_k=top_k)
+                sem_results = self.repo.semantic_search(question, user_id=user_id, meeting_id=meeting_id, top_k=top_k)
                 results.extend(sem_results.get("results", []))
                 
         finally:

@@ -1,12 +1,26 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
+
+class User(Base):
+    __tablename__ = "users"
+    
+    id = Column(String, primary_key=True, index=True) # UUID
+    username = Column(String, unique=True, index=True)
+    email = Column(String, unique=True, index=True)
+    hashed_password = Column(String)
+    created_at = Column(DateTime, default=func.now())
+    is_active = Column(Boolean, default=True)
+    theme_preference = Column(String, default="System")
+    
+    meetings = relationship("Meeting", back_populates="owner", cascade="all, delete-orphan")
 
 class Meeting(Base):
     __tablename__ = "meetings"
     
     id = Column(String, primary_key=True, index=True) # UUID
+    user_id = Column(String, ForeignKey("users.id"))
     filename = Column(String)
     title = Column(String, default="Untitled Meeting")
     file_hash = Column(String, nullable=True)
@@ -27,6 +41,7 @@ class Meeting(Base):
     recommendations = Column(String, nullable=True)
     next_steps = Column(String, nullable=True)
     
+    owner = relationship("User", back_populates="meetings")
     segments = relationship("TranscriptSegment", back_populates="meeting", cascade="all, delete-orphan")
     speakers = relationship("Speaker", back_populates="meeting", cascade="all, delete-orphan")
     action_items = relationship("ActionItem", back_populates="meeting", cascade="all, delete-orphan")

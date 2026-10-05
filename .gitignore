@@ -101,3 +101,5 @@ data/reports/*
 *.swo
 *~
 .DS_Store
+# ChromaDB / generated vector database
+storage/vector_db/

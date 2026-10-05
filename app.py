@@ -26,6 +26,12 @@ from ui.navigation import render_sidebar_navigation
 def main():
     apply_global_styles()
     
+    # Check authentication
+    if 'user_id' not in st.session_state:
+        from ui.auth import render_login_page
+        render_login_page()
+        return
+        
     # Initialize session state for navigation
     if 'current_page' not in st.session_state:
         st.session_state['current_page'] = "Dashboard"
@@ -56,7 +62,7 @@ def main():
         from storage.repository import get_meeting
         
         db = next(get_db())
-        meeting = get_meeting(db, meeting_id)
+        meeting = get_meeting(db, meeting_id, user_id=st.session_state.get('user_id'))
         
         if not meeting:
             st.error("Meeting not found.")
@@ -68,18 +74,18 @@ def main():
         
         # Display Header
         st.markdown(f"""
-            <div style="background: var(--mt-surface); border: 1px solid var(--mt-border); border-radius: var(--mt-radius-xl); padding: var(--mt-space-xl); margin-bottom: var(--mt-space-xl); box-shadow: var(--mt-shadow-soft); position: relative; overflow: hidden;">
+            <div style="background: var(--mt-surface); border: 1px solid var(--mt-border); border-radius: var(--mt-radius-xl); padding: var(--mt-space-xl); margin-bottom: var(--mt-space-xl); box-shadow: var(--mt-shadow-card); position: relative; overflow: hidden;">
                 <div style="position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: var(--mt-grad-primary);"></div>
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; position: relative; z-index: 1;">
                     <div>
-                        <h2 style="font-size: 2.2rem; font-weight: 750; color: var(--mt-text); margin: 0 0 12px 0; letter-spacing: -0.02em;">{meeting.title}</h2>
-                        <div style="display: flex; gap: 16px; color: var(--mt-text-secondary); font-size: 0.95rem; font-weight: 500;">
-                            <span style="display: flex; align-items: center; gap: 6px;"><span style="color: var(--mt-primary);">📅</span> {meeting.date.strftime('%b %d, %Y')}</span>
-                            <span style="display: flex; align-items: center; gap: 6px;"><span style="color: var(--mt-primary);">⏱️</span> {duration_str}</span>
-                            <span style="display: flex; align-items: center; gap: 6px;"><span style="color: var(--mt-primary);">👥</span> {meeting.speaker_count} Speakers</span>
+                        <h2 style="font-size: 2.2rem; font-weight: 700; color: var(--mt-text); margin: 0 0 12px 0; letter-spacing: -0.02em;">{meeting.title}</h2>
+                        <div style="display: flex; gap: 20px; color: var(--mt-text-secondary); font-size: 0.95rem; font-weight: 500;">
+                            <span style="display: flex; align-items: center; gap: 6px;"><span style="color: var(--mt-primary); font-size: 1.1rem;">📅</span> {meeting.date.strftime('%b %d, %Y')}</span>
+                            <span style="display: flex; align-items: center; gap: 6px;"><span style="color: var(--mt-primary); font-size: 1.1rem;">⏱️</span> {duration_str}</span>
+                            <span style="display: flex; align-items: center; gap: 6px;"><span style="color: var(--mt-primary); font-size: 1.1rem;">👥</span> {meeting.speaker_count} Speakers</span>
                         </div>
                     </div>
-                    <span class="badge badge-completed" style="font-size: 0.85rem; padding: 6px 12px; box-shadow: var(--mt-shadow-soft);">✓ {meeting.processing_status}</span>
+                    <span class="badge badge-completed" style="font-size: 0.85rem; padding: 6px 16px; box-shadow: var(--mt-shadow-soft);">✓ {meeting.processing_status}</span>
                 </div>
             </div>
         """, unsafe_allow_html=True)

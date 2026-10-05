@@ -14,13 +14,16 @@ def render_knowledge_search_page():
         </div>
     """, unsafe_allow_html=True)
     
+    user_id = st.session_state.get('user_id')
     repo = get_knowledge_repository()
     db = SessionLocal()
-    total_meetings = db.query(Meeting).count()
+    total_meetings = db.query(Meeting).filter(Meeting.user_id == user_id).count()
     db.close()
     
     try:
-        total_vectors = repo.vector_store.collection.count()
+        # ChromaDB count doesn't easily support where clause, we'll fetch ID list
+        user_vectors = repo.vector_store.collection.get(where={"user_id": user_id}, include=[])
+        total_vectors = len(user_vectors["ids"]) if user_vectors and "ids" in user_vectors else 0
     except Exception:
         total_vectors = 0
         
@@ -29,17 +32,17 @@ def render_knowledge_search_page():
     # Custom compact stats row
     st.markdown(f"""
         <div style="display: flex; gap: var(--mt-space-md); margin-bottom: var(--mt-space-xl);">
-            <div style="background: var(--mt-surface); border: 1px solid var(--mt-border); border-radius: var(--mt-radius-md); padding: var(--mt-space-sm) var(--mt-space-md); flex: 1; max-width: 150px; box-shadow: var(--mt-shadow-soft);">
-                <div style="font-size: 0.7rem; color: var(--mt-text-muted); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;">Meetings</div>
-                <div style="font-size: 1.2rem; font-weight: 700; color: var(--mt-text);">{total_meetings}</div>
+            <div style="background: var(--mt-surface); border: 1px solid var(--mt-border); border-radius: var(--mt-radius-lg); padding: var(--mt-space-md); flex: 1; max-width: 160px; box-shadow: var(--mt-shadow-card);">
+                <div style="font-size: 0.75rem; color: var(--mt-text-muted); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;">Meetings</div>
+                <div style="font-size: 1.5rem; font-weight: 700; color: var(--mt-text); letter-spacing: -0.02em;">{total_meetings}</div>
             </div>
-            <div style="background: var(--mt-surface); border: 1px solid var(--mt-border); border-radius: var(--mt-radius-md); padding: var(--mt-space-sm) var(--mt-space-md); flex: 1; max-width: 150px; box-shadow: var(--mt-shadow-soft);">
-                <div style="font-size: 0.7rem; color: var(--mt-text-muted); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;">Vectors</div>
-                <div style="font-size: 1.2rem; font-weight: 700; color: var(--mt-text);">{total_vectors}</div>
+            <div style="background: var(--mt-surface); border: 1px solid var(--mt-border); border-radius: var(--mt-radius-lg); padding: var(--mt-space-md); flex: 1; max-width: 160px; box-shadow: var(--mt-shadow-card);">
+                <div style="font-size: 0.75rem; color: var(--mt-text-muted); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;">Knowledge Nodes</div>
+                <div style="font-size: 1.5rem; font-weight: 700; color: var(--mt-text); letter-spacing: -0.02em;">{total_vectors}</div>
             </div>
-            <div style="background: var(--mt-surface); border: 1px solid var(--mt-border); border-radius: var(--mt-radius-md); padding: var(--mt-space-sm) var(--mt-space-md); flex: 1; max-width: 150px; box-shadow: var(--mt-shadow-soft);">
-                <div style="font-size: 0.7rem; color: var(--mt-text-muted); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;">Mode</div>
-                <div style="font-size: 1.2rem; font-weight: 700; color: var(--mt-primary);">{search_mode.upper()}</div>
+            <div style="background: var(--mt-surface); border: 1px solid var(--mt-border); border-radius: var(--mt-radius-lg); padding: var(--mt-space-md); flex: 1; max-width: 160px; box-shadow: var(--mt-shadow-card);">
+                <div style="font-size: 0.75rem; color: var(--mt-text-muted); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;">Search Engine</div>
+                <div style="font-size: 1.2rem; font-weight: 700; color: var(--mt-primary); letter-spacing: -0.02em;">{search_mode.upper()}</div>
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -77,41 +80,40 @@ def render_knowledge_search_page():
         for message in st.session_state.global_ask_ai_messages:
             if message["role"] == "user":
                 st.markdown(f"""
-                <div style="display: flex; gap: var(--mt-space-md); margin-bottom: var(--mt-space-md); padding-left: 20%; justify-content: flex-end;">
-                    <div style="background: var(--mt-surface-soft); padding: 12px 18px; border-radius: 20px; border-top-right-radius: 4px; border: 1px solid rgba(109,61,245,0.15); line-height: 1.5; color: var(--mt-text); box-shadow: var(--mt-shadow-soft);">
+                <div style="display: flex; gap: var(--mt-space-md); margin-bottom: var(--mt-space-lg); padding-left: 15%; justify-content: flex-end;">
+                    <div style="background: var(--mt-surface); padding: 14px 20px; border-radius: 20px; border-top-right-radius: 4px; border: 1px solid rgba(15, 23, 42, 0.06); line-height: 1.5; color: var(--mt-text); box-shadow: 0 4px 15px rgba(15, 23, 42, 0.03);">
                         {message["content"]}
                     </div>
-                    <div style="flex-shrink: 0; width: 32px; height: 32px; background: var(--mt-grad-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 0.8rem; box-shadow: var(--mt-shadow-soft);">U</div>
+                    <div style="flex-shrink: 0; width: 36px; height: 36px; background: var(--mt-grad-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 0.85rem; box-shadow: 0 4px 12px rgba(108, 76, 241, 0.2);">U</div>
                 </div>
                 """, unsafe_allow_html=True)
             else:
                 st.markdown(f"""
-                <div style="display: flex; gap: var(--mt-space-md); margin-bottom: var(--mt-space-md); padding-right: 15%;">
-                    <div style="flex-shrink: 0; width: 32px; height: 32px; background: var(--mt-surface); border-radius: 50%; border: 1px solid var(--mt-border); display: flex; align-items: center; justify-content: center; font-size: 1rem; color: var(--mt-primary); box-shadow: var(--mt-shadow-soft);">✧</div>
-                    <div style="background: var(--mt-surface); padding: 16px 20px; border-radius: 20px; border-top-left-radius: 4px; box-shadow: var(--mt-shadow-soft); border: 1px solid var(--mt-border); line-height: 1.6; width: 100%;">
-                        {message["content"]}
-                    </div>
-                </div>
+                <div style="display: flex; gap: var(--mt-space-md); margin-bottom: var(--mt-space-lg); padding-right: 15%;">
+                    <div style="flex-shrink: 0; width: 36px; height: 36px; background: var(--mt-grad-subtle); border-radius: 50%; border: 1px solid rgba(108, 76, 241, 0.15); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: var(--mt-primary-dark); box-shadow: inset 0 2px 4px rgba(255,255,255,0.5);">✧</div>
+                    <div style="width: 100%;">
+                        <div style="background: transparent; line-height: 1.6; color: var(--mt-text); font-size: 1rem; margin-bottom: 8px;">
+                            {message["content"].replace(chr(10), '<br>')}
+                        </div>
                 """, unsafe_allow_html=True)
-            if "status" in message and message["status"] == "LLM_UNAVAILABLE":
-                col1, col2 = st.columns([1, 4])
-                with col1:
-                    if st.button("🔄 Retry AI Answer", key=f"retry_global_{id(message)}"):
-                        # Remove the failed assistant message so the last message becomes the user query again
-                        if st.session_state.global_ask_ai_messages[-1]["role"] == "assistant":
-                            st.session_state.global_ask_ai_messages.pop()
-                        st.rerun()
-
-            if "sources" in message and message["sources"]:
-                    with st.expander(f"Found {len(message['sources'])} supporting sources"):
-                        for i, src in enumerate(message["sources"]):
-                            st.markdown(f"""
-                            <div style="background: var(--mt-bg); border: 1px solid var(--mt-border); border-radius: var(--mt-radius-sm); padding: var(--mt-space-sm) var(--mt-space-md); margin-bottom: var(--mt-space-sm);">
-                                <div style="font-weight: 600; font-size: 0.85rem; color: var(--mt-primary); margin-bottom: 4px;">Source {i+1}: {src.get('meeting_title', 'Unknown')}</div>
-                                <div style="font-size: 0.75rem; color: var(--mt-text-muted); margin-bottom: 8px;">Type: {src.get('content_type', 'Unknown')}</div>
-                                <div style="font-size: 0.85rem; color: var(--mt-text); line-height: 1.4;">"...{src.get('excerpt', src.get('content', ''))[:150]}..."</div>
+                
+                if "sources" in message and message["sources"]:
+                    st.markdown("""<div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--mt-border-light);">""", unsafe_allow_html=True)
+                    for i, src in enumerate(message["sources"]):
+                        st.markdown(f"""
+                            <div style="background: var(--mt-surface); border: 1px solid var(--mt-border); border-radius: 100px; padding: 4px 12px; font-size: 0.75rem; color: var(--mt-text-secondary); display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(15,23,42,0.02); transition: all 200ms ease;">
+                                <span style="color: var(--mt-primary);">✦</span> {src.get('meeting_title', 'Meeting Source')}
                             </div>
-                            """, unsafe_allow_html=True)
+                        """, unsafe_allow_html=True)
+                    st.markdown("</div>", unsafe_allow_html=True)
+                
+                st.markdown("</div></div>", unsafe_allow_html=True)
+                
+            if "status" in message and message["status"] == "LLM_UNAVAILABLE":
+                if st.button("🔄 Retry AI Answer", key=f"retry_global_{id(message)}"):
+                    if st.session_state.global_ask_ai_messages[-1]["role"] == "assistant":
+                        st.session_state.global_ask_ai_messages.pop()
+                    st.rerun()
 
         if prompt := st.chat_input("Ask anything about your meetings..."):
             if not prompt.strip():
@@ -129,7 +131,8 @@ def render_knowledge_search_page():
                 analyzer = MeetingAnalyzer()
                 try:
                     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-                        future = executor.submit(analyzer.rag_ask, prompt, meeting_id=None)
+                        user_id = st.session_state.get('user_id')
+                        future = executor.submit(analyzer.rag_ask, prompt, user_id=user_id, meeting_id=None)
                         response = future.result()  # Rely on RAGService internal timeouts
                     
                     answer = response.get("answer", "Error generating answer.")
@@ -166,7 +169,8 @@ def render_knowledge_search_page():
             else:
                 with st.spinner("Searching semantic index..."):
                     try:
-                        results = repo.semantic_search(query, top_k=10)
+                        user_id = st.session_state.get('user_id')
+                        results = repo.semantic_search(query, user_id=user_id, top_k=10)
                         hits = results.get("results", [])
                         
                         if not hits:

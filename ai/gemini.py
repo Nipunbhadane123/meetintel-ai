@@ -3,7 +3,7 @@ import json
 import logging
 from google import genai
 from google.genai import types
-from .base import AIProvider
+from .base import AIProvider, AIProviderError, TransientAIError, QuotaExhaustedError, AuthError
 from .schemas import MeetingInsightsSchema
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -11,19 +11,11 @@ from .prompts.meeting_intelligence_prompt import MEETING_ANALYSIS_PROMPT, SYNTHE
 
 logger = logging.getLogger(__name__)
 
-class AIProviderError(Exception):
-    pass
-
-class TransientAIError(AIProviderError):
-    pass
-
-_model_health_cache = {}
-
 class GeminiProvider(AIProvider):
     def __init__(self):
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
-            raise ValueError("GEMINI_API_KEY not set.")
+            raise AuthError("GEMINI_API_KEY not set.")
         self.client = genai.Client(api_key=api_key)
         
         primary = os.getenv("GEMINI_PRIMARY_MODEL", "gemini-3.6-flash")
@@ -33,6 +25,10 @@ class GeminiProvider(AIProvider):
         self.models_to_try = [primary] + fallbacks
         self.model_name = None
         self.max_chunk_length = 80000  # characters
+
+    @property
+    def provider_name(self) -> str:
+        return "gemini"
         
     def _call_gemini_with_retry(self, prompt: str, schema=None) -> str:
         import time
@@ -40,15 +36,6 @@ class GeminiProvider(AIProvider):
         last_error = None
         
         for model_name in self.models_to_try:
-            # Check circuit breaker
-            if model_name in _model_health_cache:
-                expiry = _model_health_cache[model_name]
-                if time.time() < expiry:
-                    logger.info(f"Skipping {model_name} (circuit breaker active).")
-                    continue
-                else:
-                    del _model_health_cache[model_name]
-            
             for attempt in range(1, 4):  # 3 attempts per model
                 try:
                     config_kwargs = {
@@ -69,19 +56,22 @@ class GeminiProvider(AIProvider):
                     logger.warning(f"Failed with model {model_name} (Attempt {attempt}): {e}")
                     err_str = str(e)
                     
+                    is_auth = "API key not valid" in err_str or "auth" in err_str.lower()
                     is_quota = "quota" in err_str.lower() or ("429" in err_str and "exceeded" in err_str.lower())
                     is_404 = "404" in err_str
                     is_transient = any(code in err_str for code in ["500", "502", "503", "504", "timeout"]) or ("429" in err_str and not is_quota)
                     
+                    if is_auth:
+                        logger.warning(f"Authentication error on {model_name}.")
+                        raise AuthError(f"Authentication failed: {e}")
+                        
                     if is_404 or is_quota:
                         logger.warning(f"Unrecoverable error (Quota/404) on {model_name}. Skipping to next model.")
-                        # Circuit breaker: Mark unavailable for 5 minutes
-                        _model_health_cache[model_name] = time.time() + 300
-                        last_error = e
+                        last_error = QuotaExhaustedError(str(e)) if is_quota else AIProviderError(str(e))
                         break
                         
                     if is_transient:
-                        last_error = e
+                        last_error = TransientAIError(str(e))
                         if attempt < 3:
                             import re
                             sleep_time = (2 ** (attempt - 1)) + random.uniform(0, 1)
@@ -98,14 +88,14 @@ class GeminiProvider(AIProvider):
                         continue
                         
                     # Non-transient error (e.g. 400 Bad Request)
-                    last_error = e
+                    last_error = AIProviderError(str(e))
                     break
             
             # If we break or exhaust retries, continue to the next model
             
         if last_error:
-            raise TransientAIError("MeetIntel AI is temporarily unable to reach the AI service.")
-        raise RuntimeError("All Gemini models failed")
+            raise last_error
+        raise AIProviderError("All Gemini models failed")
 
     def _chunk_transcript(self, transcript: str) -> list[str]:
         chunks = []
@@ -170,7 +160,18 @@ class GeminiProvider(AIProvider):
         prompt = QA_PROMPT.format(transcript=transcript, question=question, insights=insights)
         return self._call_gemini_with_retry(prompt)
 
-    def rag_ask_question(self, context: str, question: str) -> str:
+    def rag_ask_question(self, context: str, question: str) -> dict:
         from .prompts.meeting_intelligence_prompt import RAG_QA_PROMPT
+        
+        # We need to import RAGResponse dynamically to avoid circular imports if any, 
+        # but better yet, let's just let it return dict.
+        from ai.rag import RAGResponse
         prompt = RAG_QA_PROMPT.format(context=context, question=question)
-        return self._call_gemini_with_retry(prompt)
+        raw_json = self._call_gemini_with_retry(prompt, RAGResponse)
+        try:
+            parsed_json = json.loads(raw_json)
+            validated_data = RAGResponse(**parsed_json)
+            return validated_data.model_dump()
+        except Exception as e:
+            logger.error(f"Validation failed for RAG: {e}")
+            raise AIProviderError(f"Validation failed: {e}")

@@ -2,13 +2,13 @@ import streamlit as st
 
 def metric_card(title, value, icon, subtitle=""):
     html = f"""
-    <div class="metric-card" style="background: var(--mt-surface); border: 1px solid var(--mt-border); border-radius: var(--mt-radius-lg); padding: var(--mt-space-lg); box-shadow: var(--mt-shadow-soft);">
+    <div class="metric-card" style="background: var(--mt-surface); border: 1px solid var(--mt-border); border-radius: var(--mt-radius-lg); padding: var(--mt-space-lg); box-shadow: var(--mt-shadow-card);">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--mt-space-md);">
-            <div style="font-size: 0.85rem; color: var(--mt-text-muted); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;">{title}</div>
-            <div style="font-size: 1.25rem; color: var(--mt-primary); background: rgba(109, 61, 245, 0.08); width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 8px;">{icon}</div>
+            <div style="font-size: 0.8rem; color: var(--mt-text-muted); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;">{title}</div>
+            <div style="font-size: 1.25rem; color: var(--mt-primary); background: rgba(108, 76, 241, 0.08); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: var(--mt-radius-sm);">{icon}</div>
         </div>
-        <div style="font-size: 2rem; font-weight: 700; color: var(--mt-text); line-height: 1.1; margin-bottom: var(--mt-space-xs);">{value}</div>
-        <div style="font-size: 0.8rem; color: var(--mt-text-muted);">{subtitle}</div>
+        <div style="font-size: 2.2rem; font-weight: 700; color: var(--mt-text); line-height: 1.1; margin-bottom: var(--mt-space-xs); letter-spacing: -0.02em;">{value}</div>
+        <div style="font-size: 0.85rem; color: var(--mt-text-secondary);">{subtitle}</div>
     </div>
     """
     st.markdown(html, unsafe_allow_html=True)
@@ -16,44 +16,43 @@ def metric_card(title, value, icon, subtitle=""):
 def render_meeting_card(meeting, button_key, button_label="View Results →"):
     status_lower = meeting.processing_status.lower()
     badge_class = "badge-completed" if "complete" in status_lower else "badge-processing" if "process" in status_lower else "badge-pending"
+    if "fail" in status_lower or "error" in status_lower:
+        badge_class = "badge-failed"
     badge_icon = "✓" if "complete" in status_lower else "●"
     duration_str = f"{int(meeting.duration)//60}m {int(meeting.duration)%60}s"
     summary = meeting.executive_summary if meeting.executive_summary else 'No summary available.'
     
     with st.container():
-        # Inject CSS to style this specific container
         st.markdown(f"""
             <div class="meeting-card-marker-{meeting.id}"></div>
             <style>
             div[data-testid="stVerticalBlock"]:has(.meeting-card-marker-{meeting.id}):not(:has(div[data-testid="stVerticalBlock"]:has(.meeting-card-marker-{meeting.id}))) {{
                 background: var(--mt-surface) !important;
                 border-radius: var(--mt-radius-lg) !important;
-                padding: var(--mt-space-lg) !important;
-                box-shadow: var(--mt-shadow-soft) !important;
+                padding: var(--mt-space-lg) var(--mt-space-xl) !important;
+                box-shadow: var(--mt-shadow-card) !important;
                 border: 1px solid var(--mt-border) !important;
                 margin-bottom: var(--mt-space-md) !important;
                 transition: var(--mt-transition) !important;
             }}
             div[data-testid="stVerticalBlock"]:has(.meeting-card-marker-{meeting.id}):not(:has(div[data-testid="stVerticalBlock"]:has(.meeting-card-marker-{meeting.id}))):hover {{
                 box-shadow: var(--mt-shadow-hover) !important;
-                border-color: rgba(109, 61, 245, 0.3) !important;
+                border-color: rgba(108, 76, 241, 0.2) !important;
                 transform: translateY(-2px) !important;
             }}
-            .meeting-card-marker-{meeting.id} {{
-                display: none;
-            }}
+            .meeting-card-marker-{meeting.id} {{ display: none; }}
             </style>
         """, unsafe_allow_html=True)
         
-        col_icon, col_content, col_actions = st.columns([0.5, 8, 2.5])
+        col_icon, col_content, col_actions = st.columns([0.4, 8, 2.5])
         
         with col_icon:
             st.markdown("<div style='font-size: 1.5rem; line-height: 1; margin-top: 0.25rem; color: var(--mt-primary);'>◈</div>", unsafe_allow_html=True)
             
         with col_content:
-            st.markdown(f"<h3 style='margin: 0 0 6px 0; font-size: 1.1rem; color: var(--mt-text); font-weight: 600;'>{meeting.title}</h3>", unsafe_allow_html=True)
-            st.markdown(f"<div style='color: var(--mt-text-muted); font-size: 0.8rem; margin-bottom: 8px;'>{meeting.date.strftime('%Y-%m-%d')} • {duration_str} • {meeting.speaker_count} speakers</div>", unsafe_allow_html=True)
-            st.markdown(f"<div style='color: var(--mt-text-secondary); font-size: 0.85rem; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;'>{summary}</div>", unsafe_allow_html=True)
+            st.markdown(f"<h3 style='margin: 0 0 6px 0; font-size: 1.15rem; color: var(--mt-text); font-weight: 600; letter-spacing: -0.01em;'>{meeting.title}</h3>", unsafe_allow_html=True)
+            st.markdown(f"<div style='color: var(--mt-text-muted); font-size: 0.85rem; margin-bottom: 8px; font-weight: 500;'>{meeting.date.strftime('%Y-%m-%d')} &nbsp;•&nbsp; {duration_str} &nbsp;•&nbsp; {meeting.speaker_count} speakers</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='color: var(--mt-text-secondary); font-size: 0.9rem; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;'>{summary}</div>", unsafe_allow_html=True)
             
         with col_actions:
             st.markdown(f"<div style='text-align: right; margin-bottom: var(--mt-space-md);'><span class='badge {badge_class}'>{badge_icon} {meeting.processing_status}</span></div>", unsafe_allow_html=True)
@@ -97,7 +96,7 @@ def section_header(title, subtitle=None):
 
 def empty_state(icon, title, description):
     html = f"""
-    <div style="text-align: center; padding: var(--mt-space-2xl) var(--mt-space-lg); background: var(--mt-surface-soft); border-radius: var(--mt-radius-xl); border: 1px dashed rgba(16,24,40,0.15); margin: var(--mt-space-xl) 0;">
+    <div style="text-align: center; padding: var(--mt-space-2xl) var(--mt-space-lg); background: var(--mt-surface-soft); border-radius: var(--mt-radius-xl); border: 2px dashed var(--mt-border); margin: var(--mt-space-xl) 0;">
         <div style="font-size: 3rem; margin-bottom: var(--mt-space-sm);">{icon}</div>
         <h4 style="color: var(--mt-text); font-weight: 600; margin-bottom: var(--mt-space-xs);">{title}</h4>
         <p style="color: var(--mt-text-secondary); font-size: 0.95rem; max-width: 400px; margin: 0 auto;">{description}</p>

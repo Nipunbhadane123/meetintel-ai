@@ -30,18 +30,18 @@ def render_upload_page():
         with st.container():
             st.markdown(f"""
                 <div class="upload-ready-card-marker"></div>
-                <style>
-                div[data-testid="stVerticalBlock"]:has(.upload-ready-card-marker):not(:has(div[data-testid="stVerticalBlock"]:has(.upload-ready-card-marker))) {{
-                    background: var(--mt-surface) !important;
-                    border-radius: var(--mt-radius-xl) !important;
-                    padding: var(--mt-space-2xl) !important;
-                    box-shadow: var(--mt-shadow-soft) !important;
-                    border: 1px solid var(--mt-border) !important;
-                    margin-bottom: var(--mt-space-2xl) !important;
-                    text-align: center !important;
-                }}
-                .upload-ready-card-marker {{ display: none; }}
-                </style>
+            <style>
+            div[data-testid="stVerticalBlock"]:has(.upload-ready-card-marker):not(:has(div[data-testid="stVerticalBlock"]:has(.upload-ready-card-marker))) {{
+                background: var(--mt-surface) !important;
+                border-radius: var(--mt-radius-xl) !important;
+                padding: var(--mt-space-2xl) !important;
+                box-shadow: var(--mt-shadow-card) !important;
+                border: 1px solid var(--mt-border) !important;
+                margin-bottom: var(--mt-space-2xl) !important;
+                text-align: center !important;
+            }}
+            .upload-ready-card-marker {{ display: none; }}
+            </style>
             """, unsafe_allow_html=True)
             
             st.markdown(f"<div style='font-size: 3rem; margin-bottom: 1rem;'>📄</div>", unsafe_allow_html=True)
@@ -58,7 +58,8 @@ def render_upload_page():
             # Check if this file is already processed
             file_hash = metadata.get('file_hash')
             db = next(get_db())
-            existing_meeting = get_meeting_by_hash(db, file_hash) if file_hash else None
+            user_id = st.session_state.get('user_id')
+            existing_meeting = get_meeting_by_hash(db, file_hash, user_id=user_id) if file_hash else None
             
             if existing_meeting and existing_meeting.processing_status == "Completed":
                 st.markdown("<span class='badge badge-completed' style='margin-bottom: 2rem; box-shadow: var(--mt-shadow-soft);'>✓ Already Processed</span>", unsafe_allow_html=True)
@@ -94,46 +95,108 @@ def render_upload_page():
                         st.rerun()
         return
         
-    # Show Uploader
-    extensions = [ext.replace('.', '') for ext in SUPPORTED_EXTENSIONS]
+    # Add tabs for upload methods
+    tab_upload, tab_zoom, tab_meet = st.tabs(["📁 Upload File", "🎥 Import from Zoom", "📅 Import from Google Meet"])
     
-    with st.container():
-        st.markdown(f"""
-            <div class="uploader-card-marker"></div>
-            <style>
-            div[data-testid="stVerticalBlock"]:has(.uploader-card-marker):not(:has(div[data-testid="stVerticalBlock"]:has(.uploader-card-marker))) {{
-                background: var(--mt-surface) !important;
-                border-radius: var(--mt-radius-xl) !important;
-                padding: var(--mt-space-2xl) !important;
-                box-shadow: var(--mt-shadow-soft) !important;
-                border: 1px solid var(--mt-border) !important;
-                margin-bottom: var(--mt-space-2xl) !important;
-            }}
-            .uploader-card-marker {{ display: none; }}
-            </style>
-        """, unsafe_allow_html=True)
-        uploaded_file = st.file_uploader(
-            "Supported formats: " + " • ".join([ext.upper() for ext in extensions]),
-            type=extensions
-        )
-    
-    if uploaded_file is not None:
-        temp_path = UPLOAD_DIR / uploaded_file.name
-        with open(temp_path, "wb") as f:
-            f.write(uploaded_file.getbuffer())
-            
-        with st.spinner("Validating file..."):
-            is_valid, error_msg = validate_file(str(temp_path))
-            
-        if not is_valid:
-            st.error(f"Unable to process this meeting: {error_msg}")
-            if temp_path.exists():
-                os.remove(temp_path)
-            return
-            
-        metadata = get_file_metadata(str(temp_path))
-        metadata['file_hash'] = get_file_hash(str(temp_path))
+    with tab_upload:
+        # Show Uploader
+        extensions = [ext.replace('.', '') for ext in SUPPORTED_EXTENSIONS]
         
-        st.session_state['current_upload'] = str(temp_path)
-        st.session_state['upload_metadata'] = metadata
-        st.rerun()
+        with st.container():
+            st.markdown(f"""
+                <div class="uploader-card-marker"></div>
+                <style>
+                div[data-testid="stVerticalBlock"]:has(.uploader-card-marker):not(:has(div[data-testid="stVerticalBlock"]:has(.uploader-card-marker))) {{
+                    background: var(--mt-surface) !important;
+                    border-radius: var(--mt-radius-xl) !important;
+                    padding: var(--mt-space-2xl) !important;
+                    box-shadow: var(--mt-shadow-card) !important;
+                    border: 1px solid var(--mt-border) !important;
+                    margin-bottom: var(--mt-space-2xl) !important;
+                }}
+                .uploader-card-marker {{ display: none; }}
+                </style>
+            """, unsafe_allow_html=True)
+            uploaded_file = st.file_uploader(
+                "Supported formats: " + " • ".join([ext.upper() for ext in extensions]),
+                type=extensions
+            )
+        
+        if uploaded_file is not None:
+            temp_path = UPLOAD_DIR / uploaded_file.name
+            with open(temp_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+                
+            with st.spinner("Validating file..."):
+                is_valid, error_msg = validate_file(str(temp_path))
+                
+            if not is_valid:
+                st.error(f"Unable to process this meeting: {error_msg}")
+                if temp_path.exists():
+                    os.remove(temp_path)
+                st.stop()
+                
+            metadata = get_file_metadata(str(temp_path))
+            metadata['file_hash'] = get_file_hash(str(temp_path))
+            
+            st.session_state['current_upload'] = str(temp_path)
+            st.session_state['upload_metadata'] = metadata
+            st.rerun()
+
+    with tab_zoom:
+        st.markdown("<h3 style='color: var(--mt-text); margin-bottom: 1rem;'>Connect to Zoom</h3>", unsafe_allow_html=True)
+        st.info("Since this is a development environment without real Zoom credentials, importing a meeting will simulate a successful recording retrieval using a mock file.")
+        
+        meeting_id_input = st.text_input("Zoom Meeting ID or Link", placeholder="e.g. 123 456 7890")
+        if st.button("Import Recording", type="primary", key="import_zoom"):
+            if not meeting_id_input:
+                st.error("Please enter a Meeting ID.")
+            else:
+                with st.spinner("Connecting to Zoom and downloading recording..."):
+                    import time
+                    time.sleep(2)  # Simulate network request
+                    
+                    # Use the sample wav file
+                    sample_path = "sample_data/test_meeting.wav"
+                    if not os.path.exists(sample_path) and os.path.exists("test_meeting.wav"):
+                        sample_path = "test_meeting.wav"
+                        
+                    if os.path.exists(sample_path):
+                        metadata = get_file_metadata(sample_path)
+                        metadata['file_hash'] = get_file_hash(sample_path)
+                        metadata['filename'] = f"Zoom_Meeting_{meeting_id_input}.wav"
+                        st.session_state['current_upload'] = sample_path
+                        st.session_state['upload_metadata'] = metadata
+                        st.success("Successfully imported from Zoom!")
+                        st.rerun()
+                    else:
+                        st.error("Mock recording file not found in repository.")
+                        
+    with tab_meet:
+        st.markdown("<h3 style='color: var(--mt-text); margin-bottom: 1rem;'>Connect to Google Meet</h3>", unsafe_allow_html=True)
+        st.info("Since this is a development environment without Google Workspace Service Account credentials, this action will simulate a Google Drive file download.")
+        
+        meet_link_input = st.text_input("Google Drive Recording Link", placeholder="https://drive.google.com/file/d/.../view")
+        if st.button("Import Recording", type="primary", key="import_meet"):
+            if not meet_link_input:
+                st.error("Please enter a Google Drive link.")
+            else:
+                with st.spinner("Authenticating with Google Workspace and downloading recording..."):
+                    import time
+                    time.sleep(2)  # Simulate network request
+                    
+                    # Use the sample wav file
+                    sample_path = "sample_data/test_meeting.wav"
+                    if not os.path.exists(sample_path) and os.path.exists("test_meeting.wav"):
+                        sample_path = "test_meeting.wav"
+                        
+                    if os.path.exists(sample_path):
+                        metadata = get_file_metadata(sample_path)
+                        metadata['file_hash'] = get_file_hash(sample_path)
+                        metadata['filename'] = f"Google_Meet_Recording.wav"
+                        st.session_state['current_upload'] = sample_path
+                        st.session_state['upload_metadata'] = metadata
+                        st.success("Successfully imported from Google Meet!")
+                        st.rerun()
+                    else:
+                        st.error("Mock recording file not found in repository.")

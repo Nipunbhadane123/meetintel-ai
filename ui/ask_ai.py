@@ -71,7 +71,8 @@ def render_ask_ai_tab(meeting_id):
             analyzer = MeetingAnalyzer()
             try:
                 with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-                    future = executor.submit(analyzer.rag_ask, prompt, meeting_id=meeting_id)
+                    user_id = st.session_state.get('user_id')
+                    future = executor.submit(analyzer.rag_ask, prompt, user_id=user_id, meeting_id=meeting_id)
                     response = future.result()  # Rely on RAGService internal timeouts
                 
                 answer = response.get("answer", "Error generating answer.")

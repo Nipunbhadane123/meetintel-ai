@@ -101,7 +101,7 @@ def render_insights_tab(meeting):
                 imp = html.escape(risk.get('impact', 'Unknown'))
                 ctx = html.escape(risk.get('context', ''))
                 mit = html.escape(risk.get('mitigation', ''))
-                risks_html += f"<div style='margin-bottom: 12px; color: var(--mt-text-secondary); line-height: 1.6;'><strong style='color: var(--mt-warning-dark);'>{r_text}</strong> (Impact: {imp})<br>{ctx}"
+                risks_html += f"<div style='margin-bottom: 12px; color: var(--mt-text-secondary); line-height: 1.6;'><strong style='color: var(--mt-warning);'>{r_text}</strong> (Impact: {imp})<br>{ctx}"
                 if mit:
                     risks_html += f"<br><em>Mitigation:</em> {mit}"
                 risks_html += "</div>"
@@ -124,7 +124,7 @@ def render_insights_tab(meeting):
     dec_html = ""
     if decisions:
         for d in decisions:
-            dec_html += f"<div style='margin-bottom: 12px; color: var(--mt-text-secondary); line-height: 1.6;'><strong style='color: var(--mt-success-dark);'>{html.escape(d.decision)}</strong><br>{html.escape(d.context)}</div>"
+            dec_html += f"<div style='margin-bottom: 12px; color: var(--mt-text-secondary); line-height: 1.6;'><strong style='color: var(--mt-success);'>{html.escape(d.decision)}</strong><br>{html.escape(d.context)}</div>"
     else:
         dec_html = "<p style='color: var(--mt-text-muted);'>No decisions were identified.</p>"
         

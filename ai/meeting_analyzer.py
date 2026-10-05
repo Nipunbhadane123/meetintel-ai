@@ -1,20 +1,11 @@
 import os
 import logging
-from .gemini import GeminiProvider
-from .openai_provider import OpenAIProvider
+from .provider_manager import AIProviderManager
 
 logger = logging.getLogger(__name__)
 
 def get_ai_provider():
-    provider_name = os.getenv("AI_PROVIDER", "Gemini").lower()
-    if provider_name == "openai":
-        try:
-            return OpenAIProvider()
-        except ValueError:
-            logger.warning("OpenAI configured but API key missing. Falling back to Gemini.")
-            return GeminiProvider()
-    else:
-        return GeminiProvider()
+    return AIProviderManager()
 
 class MeetingAnalyzer:
     def __init__(self):
@@ -37,8 +28,8 @@ class MeetingAnalyzer:
         logger.info(f"Ask AI completed in {time.time() - start:.2f}s")
         return res
 
-    def rag_ask(self, question: str, meeting_id: str = None) -> dict:
+    def rag_ask(self, question: str, user_id: str = None, meeting_id: str = None) -> dict:
         """Ask a question using RAG over the knowledge repository."""
         from ai.rag import RAGService
         service = RAGService()
-        return service.ask(question, meeting_id)
+        return service.ask(question, user_id=user_id, meeting_id=meeting_id)
