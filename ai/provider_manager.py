@@ -4,6 +4,7 @@ import logging
 from .base import AIProvider, TransientAIError, QuotaExhaustedError, AuthError, AIProviderError
 from .gemini import GeminiProvider
 from .openai_provider import OpenAIProvider
+from .demo_provider import DemoProvider
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,8 @@ class AIProviderManager:
             return GeminiProvider()
         elif provider_name == "openai":
             return OpenAIProvider()
+        elif provider_name == "demo":
+            return DemoProvider()
         raise ValueError(f"Unknown provider: {provider_name}")
 
     def _is_provider_healthy(self, provider_name: str) -> bool:
@@ -44,9 +47,19 @@ class AIProviderManager:
     def _get_provider_chain(self) -> list[str]:
         # Determine primary and fallback based on env config
         primary = os.getenv("AI_PRIMARY_PROVIDER", os.getenv("AI_PROVIDER", "gemini")).lower()
-        if primary == "openai":
-            return ["openai", "gemini"]
-        return ["gemini", "openai"]
+        chain = []
+        if primary == "demo":
+            return ["demo"]
+        elif primary == "openai":
+            chain = ["openai", "gemini"]
+        else:
+            chain = ["gemini", "openai"]
+            
+        # Demo provider is ONLY added to failover chain when DEMO_MODE is explicitly enabled
+        is_demo_mode = os.getenv("DEMO_MODE", "false").lower() == "true"
+        if is_demo_mode:
+            chain.append("demo")
+        return chain
 
     def _execute_with_failover(self, method_name: str, *args, **kwargs):
         chain = self._get_provider_chain()
@@ -82,8 +95,6 @@ class AIProviderManager:
                 return result
             except TransientAIError as e:
                 logger.warning(f"{provider_name} encountered a transient error: {e}")
-                # Wait exponential already handled mostly inside provider, 
-                # but if it bubbled up, it means it failed after retries.
                 self._mark_provider_unhealthy(provider_name)
                 last_error = e
             except QuotaExhaustedError as e:
@@ -98,11 +109,11 @@ class AIProviderManager:
                 logger.error(f"{provider_name} unexpected error: {e}")
                 self._mark_provider_unhealthy(provider_name)
                 last_error = e
-                
-        # If we get here, all providers failed
+
+        # In live mode (DEMO_MODE=false), do not silently substitute fabricated summaries
         if last_error:
             raise RuntimeError(f"All configured AI providers failed. Last error: {last_error}")
-        raise RuntimeError("No configured AI providers are available.")
+        raise RuntimeError("No configured AI providers are available. Please configure GEMINI_API_KEY or OPENAI_API_KEY.")
 
     def generate_insights(self, transcript: str) -> dict:
         return self._execute_with_failover("generate_insights", transcript)

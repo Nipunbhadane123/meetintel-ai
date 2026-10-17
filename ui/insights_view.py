@@ -1,153 +1,146 @@
 import streamlit as st
 import json
 import html
-from ui.components import section_header
+from ui.components import section_header, safe_escape, get_icon_svg, render_status_badge
+
+def _safe_json_loads(val, default=None):
+    if not val:
+        return default if default is not None else []
+    try:
+        return json.loads(val)
+    except Exception:
+        return default if default is not None else []
 
 def render_insights_tab(meeting):
     col1, col2 = st.columns([0.8, 0.2])
     with col1:
-        section_header("📊 Overview & Insights", "AI-generated analysis of your meeting")
+        section_header("Overview & Strategic Insights", "AI-generated executive analysis of meeting dialogue, decisions, and outcomes.", category="Meeting Dossier")
     with col2:
         insights_data = {
             "executive_summary": meeting.executive_summary,
             "meeting_objective": meeting.meeting_objective,
             "emotional_analysis": meeting.emotional_analysis,
-            "key_topics": json.loads(meeting.key_topics) if meeting.key_topics else [],
-            "key_points": json.loads(meeting.key_points) if meeting.key_points else [],
-            "recommendations": json.loads(meeting.recommendations) if meeting.recommendations else [],
-            "next_steps": json.loads(meeting.next_steps) if meeting.next_steps else []
+            "key_topics": _safe_json_loads(meeting.key_topics),
+            "key_points": _safe_json_loads(meeting.key_points),
+            "recommendations": _safe_json_loads(meeting.recommendations),
+            "next_steps": _safe_json_loads(meeting.next_steps)
         }
-        st.download_button("↓ Export (JSON)", data=json.dumps(insights_data, indent=2), file_name=f"Insights_{meeting.id}.json", mime="application/json", type="secondary")
+        st.download_button("↓ Export (JSON)", data=json.dumps(insights_data, indent=2), file_name=f"Insights_{meeting.id}.json", mime="application/json", type="secondary", use_container_width=True)
         
-    summary_text = html.escape(meeting.executive_summary) if meeting.executive_summary else "No summary available."
-    st.markdown(f'''
-    <div style="background: var(--mt-surface); border: 1px solid var(--mt-border); border-radius: var(--mt-radius-xl); padding: var(--mt-space-xl); margin-bottom: var(--mt-space-lg); box-shadow: var(--mt-shadow-soft);">
-        <h4 style="color: var(--mt-text); margin-top: 0; font-size: 1.25rem; font-weight: 650; margin-bottom: var(--mt-space-md);">Executive Summary</h4>
-        <p style="color: var(--mt-text-secondary); font-size: 1.05rem; line-height: 1.7; margin: 0;">{summary_text}</p>
-    </div>
-    ''', unsafe_allow_html=True)
+    summary_text = safe_escape(meeting.executive_summary, default="No summary available.")
     
-    col_a, col_b = st.columns(2)
-    with col_a:
-        obj_text = html.escape(meeting.meeting_objective) if meeting.meeting_objective else "Not explicitly identified."
-        st.markdown(f'''
-        <div class="saas-card" style="margin-bottom: var(--mt-space-md); padding: var(--mt-space-lg);">
-            <h4 style="color: var(--mt-text); margin-top: 0; font-weight: 650;">🎯 Meeting Objective</h4>
-            <p style="color: var(--mt-text-secondary); line-height: 1.6; margin: 0;">{obj_text}</p>
-        </div>
-        ''', unsafe_allow_html=True)
-    with col_b:
-        emo_text = html.escape(meeting.emotional_analysis) if meeting.emotional_analysis else "Neutral"
-        st.markdown(f'''
-        <div class="saas-card" style="margin-bottom: var(--mt-space-md); padding: var(--mt-space-lg);">
-            <h4 style="color: var(--mt-text); margin-top: 0; font-weight: 650;">🎭 Emotional Tone</h4>
-            <p style="color: var(--mt-text-secondary); line-height: 1.6; margin: 0;">{emo_text}</p>
-        </div>
-        ''', unsafe_allow_html=True)
-        
-    col1, col2 = st.columns(2)
-    with col1:
-        topics = json.loads(meeting.key_topics) if meeting.key_topics else []
-        topics_html = "<ul style='padding-left: 20px; color: var(--mt-text-secondary); line-height: 1.6; margin: 0;'>" + "".join([f"<li style='margin-bottom: 8px;'>{html.escape(t)}</li>" for t in topics]) + "</ul>" if topics else "<p style='color: var(--mt-text-muted);'>None</p>"
-        st.markdown(f'''
-        <div class="saas-card" style="margin-bottom: var(--mt-space-md); padding: var(--mt-space-lg);">
-            <h4 style="color: var(--mt-text); margin-top: 0; font-weight: 650;">🔑 Key Topics</h4>
-            {topics_html}
-        </div>
-        ''', unsafe_allow_html=True)
-            
-        points = json.loads(meeting.key_points) if meeting.key_points else []
-        points_html = "<ul style='padding-left: 20px; color: var(--mt-text-secondary); line-height: 1.6; margin: 0;'>" + "".join([f"<li style='margin-bottom: 8px;'>{html.escape(p)}</li>" for p in points]) + "</ul>" if points else "<p style='color: var(--mt-text-muted);'>None</p>"
-        st.markdown(f'''
-        <div class="saas-card" style="margin-bottom: var(--mt-space-md); padding: var(--mt-space-lg);">
-            <h4 style="color: var(--mt-text); margin-top: 0; font-weight: 650;">💡 Key Points</h4>
-            {points_html}
-        </div>
-        ''', unsafe_allow_html=True)
-            
-    with col2:
-        recs = json.loads(meeting.recommendations) if meeting.recommendations else []
-        recs_html = "<ul style='padding-left: 20px; color: var(--mt-text-secondary); line-height: 1.6; margin: 0;'>" + "".join([f"<li style='margin-bottom: 8px;'>{html.escape(r)}</li>" for r in recs]) + "</ul>" if recs else "<p style='color: var(--mt-text-muted);'>None</p>"
-        st.markdown(f'''
-        <div class="saas-card" style="margin-bottom: var(--mt-space-md); padding: var(--mt-space-lg);">
-            <h4 style="color: var(--mt-text); margin-top: 0; font-weight: 650;">📌 Recommendations</h4>
-            {recs_html}
-        </div>
-        ''', unsafe_allow_html=True)
-            
-        steps = json.loads(meeting.next_steps) if meeting.next_steps else []
-        steps_html = "<ul style='padding-left: 20px; color: var(--mt-text-secondary); line-height: 1.6; margin: 0;'>" + "".join([f"<li style='margin-bottom: 8px;'>{html.escape(s)}</li>" for s in steps]) + "</ul>" if steps else "<p style='color: var(--mt-text-muted);'>None</p>"
-        st.markdown(f'''
-        <div class="saas-card" style="margin-bottom: var(--mt-space-md); padding: var(--mt-space-lg);">
-            <h4 style="color: var(--mt-text); margin-top: 0; font-weight: 650;">🚀 Next Steps</h4>
-            {steps_html}
-        </div>
-        ''', unsafe_allow_html=True)
-        
-    plan_text = html.escape(meeting.meeting_plan) if meeting.meeting_plan else "None"
-    st.markdown(f'''
-    <div class="saas-card" style="margin-bottom: var(--mt-space-md); padding: var(--mt-space-lg);">
-        <h4 style="color: var(--mt-text); margin-top: 0; font-weight: 650;">📅 Meeting Plan & Follow-up</h4>
-        <p style="color: var(--mt-text-secondary); line-height: 1.6; margin: 0;">{plan_text}</p>
-    </div>
-    ''', unsafe_allow_html=True)
+    # 1. Executive Summary
+    with st.container(border=True):
+        st.markdown(
+            f"<div style='font-size: 0.72rem; font-weight: 700; color: var(--mt-primary); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px;'>Executive Synthesis</div>"
+            f"<h3 style='color: var(--mt-text); margin: 0 0 10px 0; font-size: 1.25rem; font-weight: 700;'>Executive Summary</h3>"
+            f"<p style='color: var(--mt-text-secondary); font-size: 0.96rem; line-height: 1.7; margin: 0;'>{summary_text}</p>",
+            unsafe_allow_html=True
+        )
     
-    risks_html = ""
-    if meeting.risks:
-        risks = json.loads(meeting.risks)
-        for risk in risks:
-            if isinstance(risk, dict):
-                r_text = html.escape(risk.get('risk', 'Unknown'))
-                imp = html.escape(risk.get('impact', 'Unknown'))
-                ctx = html.escape(risk.get('context', ''))
-                mit = html.escape(risk.get('mitigation', ''))
-                risks_html += f"<div style='margin-bottom: 12px; color: var(--mt-text-secondary); line-height: 1.6;'><strong style='color: var(--mt-warning);'>{r_text}</strong> (Impact: {imp})<br>{ctx}"
-                if mit:
-                    risks_html += f"<br><em>Mitigation:</em> {mit}"
-                risks_html += "</div>"
+    st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
+
+    # 2. Objective & Emotional Analysis in a single unified container
+    with st.container(border=True):
+        col_a, col_b = st.columns(2)
+        with col_a:
+            obj_text = safe_escape(meeting.meeting_objective, default="Not explicitly identified.")
+            target_icon = get_icon_svg("target", size=18, color="#6C4DFF")
+            st.markdown(f"<h4 style='color: var(--mt-text); margin: 0 0 6px 0; font-weight: 700; font-size: 1.05rem; display: flex; align-items: center; gap: 6px;'>{target_icon} Meeting Objective</h4>", unsafe_allow_html=True)
+            st.markdown(f"<p style='color: var(--mt-text-secondary); line-height: 1.6; font-size: 0.9rem; margin: 0;'>{obj_text}</p>", unsafe_allow_html=True)
+        with col_b:
+            emo_text = safe_escape(meeting.emotional_analysis, default="Neutral")
+            sparkle_icon = get_icon_svg("sparkles", size=18, color="#6C4DFF")
+            st.markdown(f"<h4 style='color: var(--mt-text); margin: 0 0 6px 0; font-weight: 700; font-size: 1.05rem; display: flex; align-items: center; gap: 6px;'>{sparkle_icon} Emotional Tone & Engagement</h4>", unsafe_allow_html=True)
+            st.markdown(f"<p style='color: var(--mt-text-secondary); line-height: 1.6; font-size: 0.9rem; margin: 0;'>{emo_text}</p>", unsafe_allow_html=True)
+        
+    st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
+
+    # 3. Two-column Detailed Breakdown with light dividers instead of nested bordered boxes
+    with st.container(border=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("<h4 style='color: var(--mt-text); margin: 0 0 8px 0; font-weight: 700; font-size: 1.05rem;'>🔑 Key Topics</h4>", unsafe_allow_html=True)
+            topics = _safe_json_loads(meeting.key_topics)
+            if topics:
+                for idx, t in enumerate(topics):
+                    if idx > 0:
+                        st.markdown("<div style='height: 1px; background: var(--mt-border); margin: 6px 0;'></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-size: 0.88rem; color: var(--mt-text); padding: 2px 0;'>• {safe_escape(t)}</div>", unsafe_allow_html=True)
             else:
-                risks_html += f"<ul style='padding-left: 20px; color: var(--mt-text-secondary); margin: 0;'><li style='margin-bottom: 8px;'>{html.escape(risk)}</li></ul>"
-    if not risks_html:
-        risks_html = "<p style='color: var(--mt-text-muted);'>None</p>"
+                st.caption("None recorded.")
+                
+            st.markdown("<div style='height: 16px;'></div>", unsafe_allow_html=True)
+            st.markdown("<h4 style='color: var(--mt-text); margin: 0 0 8px 0; font-weight: 700; font-size: 1.05rem;'>💡 Key Discussion Points</h4>", unsafe_allow_html=True)
+            points = _safe_json_loads(meeting.key_points)
+            if points:
+                for idx, p in enumerate(points):
+                    if idx > 0:
+                        st.markdown("<div style='height: 1px; background: var(--mt-border); margin: 6px 0;'></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-size: 0.88rem; color: var(--mt-text); padding: 2px 0;'>• {safe_escape(p)}</div>", unsafe_allow_html=True)
+            else:
+                st.caption("None recorded.")
+                
+        with col2:
+            st.markdown("<h4 style='color: var(--mt-text); margin: 0 0 8px 0; font-weight: 700; font-size: 1.05rem;'>📌 Recommendations</h4>", unsafe_allow_html=True)
+            recs = _safe_json_loads(meeting.recommendations)
+            if recs:
+                for idx, r in enumerate(recs):
+                    if idx > 0:
+                        st.markdown("<div style='height: 1px; background: var(--mt-border); margin: 6px 0;'></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-size: 0.88rem; color: var(--mt-text); padding: 2px 0;'>• {safe_escape(r)}</div>", unsafe_allow_html=True)
+            else:
+                st.caption("None recorded.")
+                
+            st.markdown("<div style='height: 16px;'></div>", unsafe_allow_html=True)
+            st.markdown("<h4 style='color: var(--mt-text); margin: 0 0 8px 0; font-weight: 700; font-size: 1.05rem;'>🚀 Next Steps</h4>", unsafe_allow_html=True)
+            steps = _safe_json_loads(meeting.next_steps)
+            if steps:
+                for idx, s in enumerate(steps):
+                    if idx > 0:
+                        st.markdown("<div style='height: 1px; background: var(--mt-border); margin: 6px 0;'></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-size: 0.88rem; color: var(--mt-text); padding: 2px 0;'>• {safe_escape(s)}</div>", unsafe_allow_html=True)
+            else:
+                st.caption("None recorded.")
         
-    st.markdown(f'''
-    <div class="saas-card" style="border-left: 4px solid var(--mt-warning); margin-bottom: var(--mt-space-md); padding: var(--mt-space-lg);">
-        <h4 style="color: var(--mt-text); margin-top: 0; font-weight: 650;">⚠️ Risks and Issues</h4>
-        {risks_html}
-    </div>
-    ''', unsafe_allow_html=True)
-    
-    from storage.database import get_db
-    from storage.models import Decision
-    db = next(get_db())
-    decisions = db.query(Decision).filter(Decision.meeting_id == meeting.id).all()
-    dec_html = ""
-    if decisions:
-        for d in decisions:
-            dec_html += f"<div style='margin-bottom: 12px; color: var(--mt-text-secondary); line-height: 1.6;'><strong style='color: var(--mt-success);'>{html.escape(d.decision)}</strong><br>{html.escape(d.context)}</div>"
-    else:
-        dec_html = "<p style='color: var(--mt-text-muted);'>No decisions were identified.</p>"
+    st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
+
+    # 4. Meeting Plan & Risks in a clean layout
+    plan_text = safe_escape(meeting.meeting_plan, default="No specific follow-up plan registered.")
+    with st.container(border=True):
+        st.markdown("<h4 style='color: var(--mt-text); margin: 0 0 6px 0; font-weight: 700; font-size: 1.05rem;'>📅 Meeting Plan & Follow-up</h4>", unsafe_allow_html=True)
+        st.markdown(f"<p style='color: var(--mt-text-secondary); line-height: 1.6; font-size: 0.9rem; margin: 0 0 14px 0;'>{plan_text}</p>", unsafe_allow_html=True)
+
+        st.markdown("<div style='height: 1px; background: var(--mt-border); margin: 12px 0;'></div>", unsafe_allow_html=True)
         
-    st.markdown(f'''
-    <div class="saas-card" style="border-left: 4px solid var(--mt-success); margin-bottom: var(--mt-space-md); padding: var(--mt-space-lg);">
-        <h4 style="color: var(--mt-text); margin-top: 0; font-weight: 650;">🤝 Decisions</h4>
-        {dec_html}
-    </div>
-    ''', unsafe_allow_html=True)
+        warn_icon = get_icon_svg("alert-triangle", size=18, color="#D98A16")
+        st.markdown(f"<h4 style='color: var(--mt-warning); margin: 0 0 8px 0; font-weight: 700; font-size: 1.05rem; display: flex; align-items: center; gap: 6px;'>{warn_icon} Risks and Dependencies</h4>", unsafe_allow_html=True)
+        risks = _safe_json_loads(meeting.risks)
+        if risks:
+            for risk in risks:
+                if isinstance(risk, dict):
+                    r_text = safe_escape(risk.get('risk', 'Unknown'))
+                    imp = safe_escape(risk.get('impact', 'Unknown'))
+                    ctx = safe_escape(risk.get('context', ''))
+                    mit = safe_escape(risk.get('mitigation', ''))
+                    st.markdown(f"<div style='padding: 4px 0; font-size: 0.88rem;'><strong>{r_text}</strong> <span style='color: var(--mt-text-secondary);'>(Impact: {imp})</span><br><span style='color: var(--mt-text-secondary);'>{ctx}</span></div>", unsafe_allow_html=True)
+                    if mit:
+                        st.markdown(f"<div style='color: var(--mt-primary); font-size: 0.84rem;'><em>Mitigation:</em> {mit}</div>", unsafe_allow_html=True)
+                else:
+                    st.markdown(f"<div style='padding: 2px 0; font-size: 0.88rem; color: var(--mt-text);'>• {safe_escape(risk)}</div>", unsafe_allow_html=True)
+        else:
+            st.caption("No operational risks identified.")
 
     # Show performance metrics if available
     if 'last_metrics' in st.session_state:
         metrics = st.session_state['last_metrics']
-        st.markdown(f'''
-        <div style="background: var(--mt-surface-soft); border-radius: var(--mt-radius-lg); padding: var(--mt-space-md) var(--mt-space-lg); margin-top: var(--mt-space-2xl); border: 1px solid var(--mt-border);">
-            <h4 style="color: var(--mt-text); margin-top: 0; margin-bottom: 8px; font-size: 0.95rem; font-weight: 600;">⏱️ Processing Performance</h4>
-            <div style="display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.85rem; color: var(--mt-text-secondary);">
-                <span>Audio Prep: <b>{metrics.get('audio', 0):.1f}s</b></span>
-                <span>Whisper: <b>{metrics.get('whisper', 0):.1f}s</b></span>
-                <span>Diarization: <b>{metrics.get('diarization', 0):.1f}s</b></span>
-                <span>Alignment: <b>{metrics.get('alignment', 0):.1f}s</b></span>
-                <span>AI Insights: <b>{metrics.get('llm', 0):.1f}s</b></span>
-                <span>Total: <b style="color: var(--mt-primary);">{metrics.get('total', 0):.1f}s</b></span>
-            </div>
-        </div>
-        ''', unsafe_allow_html=True)
+        st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown("<h4 style='color: var(--mt-text); margin: 0 0 10px 0; font-size: 0.95rem; font-weight: 600;'>⏱️ Processing Performance</h4>", unsafe_allow_html=True)
+            col_m1, col_m2, col_m3, col_m4, col_m5, col_m6 = st.columns(6)
+            with col_m1: st.caption("AUDIO PREP"); st.write(f"{metrics.get('audio', 0):.1f}s")
+            with col_m2: st.caption("WHISPER"); st.write(f"{metrics.get('whisper', 0):.1f}s")
+            with col_m3: st.caption("DIARIZATION"); st.write(f"{metrics.get('diarization', 0):.1f}s")
+            with col_m4: st.caption("ALIGNMENT"); st.write(f"{metrics.get('alignment', 0):.1f}s")
+            with col_m5: st.caption("AI INSIGHTS"); st.write(f"{metrics.get('llm', 0):.1f}s")
+            with col_m6: st.caption("TOTAL"); st.markdown(f"<strong style='color: var(--mt-primary);'>{metrics.get('total', 0):.1f}s</strong>", unsafe_allow_html=True)

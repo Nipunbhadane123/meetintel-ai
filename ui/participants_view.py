@@ -1,47 +1,41 @@
 import streamlit as st
 import json
+import html
 from storage.database import get_db
 from storage.models import Participant
-from ui.components import section_header, empty_state
+from ui.components import section_header, empty_state, safe_escape, get_icon_svg
 
 def render_participants_tab(meeting_id):
-    section_header("👥 Participants", "People identified in the meeting")
+    section_header("Participants & Speaker Mapping", "People identified in the session and attributed responsibilities.", category="Meeting Dossier")
     
     db = next(get_db())
     participants = db.query(Participant).filter(Participant.meeting_id == meeting_id).all()
     
     if not participants:
-        empty_state("👥", "No participants mapped", "Participant mapping hasn't been generated for this meeting.")
+        empty_state("users", "No participants mapped", "Participant mapping hasn't been generated for this meeting.")
         return
         
-    for p in participants:
-        resp = []
-        try:
-            resp = json.loads(p.responsibilities) if p.responsibilities else []
-        except:
-            pass
-            
-        resp_html = ""
-        if resp:
-            resp_html = "<ul style='padding-left: 20px; color: var(--mt-text-secondary); line-height: 1.6; margin: 0;'>" + "".join([f"<li style='margin-bottom: 6px;'>{r}</li>" for r in resp]) + "</ul>"
-        else:
-            resp_html = "<span style='color: var(--mt-text-muted);'>No explicitly assigned responsibilities.</span>"
-            
-        html = f"""
-        <div class="saas-card" style="margin-bottom: var(--mt-space-md); padding: var(--mt-space-lg);">
-            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-                <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--mt-surface-soft); border: 1px solid var(--mt-border); display: flex; align-items: center; justify-content: center; font-weight: 600; color: var(--mt-primary);">{p.name[0].upper() if p.name else "?"}</div>
-                <div>
-                    <h4 style="color: var(--mt-text); margin: 0; font-weight: 650; font-size: 1.1rem;">{p.name}</h4>
-                    <p style="color: var(--mt-text-muted); font-size: 0.85rem; margin: 0;">Speaker ID: {p.speaker_id}</p>
-                </div>
-            </div>
-            <div style="font-size: 0.95rem; margin-top: var(--mt-space-md);">
-                <strong style="color: var(--mt-text); display: block; margin-bottom: 8px;">Responsibilities:</strong>
-                <div style="margin-top: 0.5rem; padding-left: 0.5rem;">
-                    {resp_html}
-                </div>
-            </div>
-        </div>
-        """
-        st.markdown(html, unsafe_allow_html=True)
+    with st.container(border=True):
+        for idx, p in enumerate(participants):
+            if idx > 0:
+                st.markdown("<div style='height: 1px; background: var(--mt-border); margin: 12px 0;'></div>", unsafe_allow_html=True)
+            resp = []
+            try:
+                resp = json.loads(p.responsibilities) if p.responsibilities else []
+            except:
+                pass
+                
+            col_avatar, col_info = st.columns([0.4, 6])
+            with col_avatar:
+                initial = (p.name[0] if p.name else "?").upper()
+                st.markdown(f"<div style='width: 38px; height: 38px; border-radius: 50%; background: var(--mt-primary-light); color: var(--mt-primary); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.95rem;'>{safe_escape(initial)}</div>", unsafe_allow_html=True)
+            with col_info:
+                st.markdown(f"<h4 style='color: var(--mt-text); margin: 0; font-weight: 700; font-size: 1.05rem;'>{safe_escape(p.name)}</h4>", unsafe_allow_html=True)
+                st.caption(f"Speaker Diarization Tag: {safe_escape(p.speaker_id)}")
+
+                if resp:
+                    st.markdown("<strong style='font-size: 0.8rem; color: var(--mt-text-secondary); text-transform: uppercase;'>Attributed Responsibilities:</strong>", unsafe_allow_html=True)
+                    for r in resp:
+                        st.markdown(f"<div style='font-size: 0.88rem; color: var(--mt-text); padding: 1px 0;'>• {safe_escape(r)}</div>", unsafe_allow_html=True)
+                else:
+                    st.caption("No explicitly assigned commitments recorded.")

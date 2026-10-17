@@ -103,3 +103,13 @@ data/reports/*
 .DS_Store
 # ChromaDB / generated vector database
 storage/vector_db/
+
+# Node.js and Next.js Web Frontend
+node_modules/
+.next/
+out/
+web/node_modules/
+web/.next/
+web/out/
+*.tsbuildinfo
+next-env.d.ts

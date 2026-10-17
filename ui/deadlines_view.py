@@ -1,31 +1,27 @@
 import streamlit as st
 import pandas as pd
+import html
 from storage.database import get_db
 from storage.models import Deadline
-from ui.components import section_header, empty_state
+from ui.components import section_header, empty_state, render_status_badge, safe_escape, get_icon_svg
 
 def render_deadlines_tab(meeting_id):
-    section_header("📅 Deadlines", "Key dates and deadlines mentioned")
+    section_header("Deadlines & Milestones", "Key dates and confirmed timeframes mentioned in meeting dialogue.", category="Meeting Deliverables")
     
     db = next(get_db())
     deadlines = db.query(Deadline).filter(Deadline.meeting_id == meeting_id).all()
     
     if not deadlines:
-        empty_state("📅", "No deadlines", "No explicit deadlines were identified in this meeting.")
+        empty_state("calendar-clock", "No deadlines identified", "No explicit deadlines were identified in this meeting.")
         return
         
-    for dl in deadlines:
-        html = f"""
-        <div class="saas-card" style="border-left: 4px solid var(--mt-primary); margin-bottom: var(--mt-space-md); padding: var(--mt-space-lg);">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                <div>
-                    <h4 style="color: var(--mt-text); margin-bottom: 8px; margin-top: 0; font-weight: 650; font-size: 1.1rem;">{dl.description}</h4>
-                    <p style="color: var(--mt-text-secondary); font-size: 0.95rem; margin-bottom: 0;">Task: {dl.related_task}</p>
-                </div>
-                <div style="text-align: right;">
-                    <span class="badge badge-processing" style="font-size: 0.85rem; padding: 6px 12px;">{dl.date}</span>
-                </div>
-            </div>
-        </div>
-        """
-        st.markdown(html, unsafe_allow_html=True)
+    with st.container(border=True):
+        for idx, dl in enumerate(deadlines):
+            if idx > 0:
+                st.markdown("<div style='height: 1px; background: var(--mt-border); margin: 10px 0;'></div>", unsafe_allow_html=True)
+            col_d1, col_d2 = st.columns([3.5, 1.2])
+            with col_d1:
+                st.markdown(f"<h4 style='color: var(--mt-text); margin: 0 0 4px 0; font-weight: 700; font-size: 1.05rem;'>{safe_escape(dl.description)}</h4>", unsafe_allow_html=True)
+                st.caption(f"Associated Commitment: {safe_escape(dl.related_task or 'General Deliverable')}")
+            with col_d2:
+                st.markdown(f"<div style='text-align: right;'>{render_status_badge(dl.date, 'status')}</div>", unsafe_allow_html=True)

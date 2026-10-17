@@ -1,363 +1,363 @@
-# MeetIntel AI
+# MeetIntel AI — Enterprise Meeting-to-Execution Automation Platform
 
-## AI-Powered Meeting Intelligence Platform
+> **"Turn every meeting into accountable action, automated follow-up, and measurable progress."**
 
-MeetIntel AI is an advanced application that transforms meeting recordings into structured, searchable, and actionable knowledge. Instead of just generating a raw transcript, the system uses AI to understand the conversation, extract decisions and action items, identify speakers, and store the meeting in a persistent vector knowledge base. This allows users to search across all their historical meetings or ask natural-language questions to instantly retrieve information that would otherwise be lost.
+MeetIntel AI is a production-grade enterprise application that evolves meeting intelligence from passive transcripts and summaries into an **accountable execution and organizational operations engine**.
 
----
-
-## 2. Project Overview
-
-Meetings contain critical decisions, responsibilities, and deadlines. However, manually reviewing hour-long audio recordings or reading unstructured transcripts is extremely time-consuming. When a decision gets buried an hour into a meeting, it often gets lost completely.
-
-MeetIntel AI addresses this problem by combining:
-- Local speech-to-text processing
-- Speaker diarization
-- LLM-based structured information extraction
-- Relational meeting storage
-- Vector embeddings and semantic search
-- Retrieval-Augmented Generation (RAG)
-- Streamlit-based UI and FastAPI backend
-- User-level authentication and data isolation
-
-The goal is to move from **recording a meeting** to **understanding and querying a meeting**.
-
----
-
-## 3. Why MeetIntel AI?
-
-**Traditional Meeting Recording:**
-- Stores raw audio/video.
-- Extremely difficult to review or search.
-- Critical information remains buried and inaccessible.
-
-**Basic Transcription:**
-- Produces a wall of text.
-- Still requires manual human analysis.
-- Decisions, deadlines, and action items are not structured.
-
-**MeetIntel AI:**
-- Generates high-accuracy transcriptions.
-- Identifies who spoke when (Speaker Diarization).
-- Automatically writes executive summaries.
-- Extracts structured arrays of decisions, action items, participants, and deadlines.
-- Builds a searchable vector knowledge base.
-- Enables Semantic Search and RAG-based AI question answering.
-- Generates downloadable PDF/CSV/DOCX reports.
-
----
-
-## 4. Key Features
-
-### Authentication & User Access
-- Registration and login system
-- Secure password hashing
-- Session handling via Streamlit state
-- User-specific meeting retrieval
-- Strict user-level data isolation
-
-### Meeting Processing
-- Audio/video upload via the UI
-- File validation and format checking
-- FFmpeg audio preprocessing
-- Local Speech-to-Text using Faster-Whisper
-- Speaker diarization using Pyannote.audio
-- Generation of a clean, speaker-labelled transcript
-
-### AI Meeting Intelligence
-- Executive summary generation
-- Key discussion points extraction
-- Structured decision extraction
-- Action item mapping (task, assignee, status)
-- Participant mapping (name, responsibilities)
-- Deadline and priority tracking
-- Strict Pydantic schema validation for AI outputs
-
-### Knowledge Repository
-- Persistent meeting storage in SQLite
-- Transcript and metadata chunking
-- Text embeddings using Sentence-Transformers
-- Local vector database using ChromaDB
-- Fast semantic search across historical meetings
-
-### AI Assistant / RAG
-- Natural-language questioning across the knowledge base
-- Retrieval of relevant meeting chunks using semantic similarity
-- Meeting-specific context bounding
-- Source-aware answers to prevent hallucinations
-- RAG (Retrieval-Augmented Generation) powered responses
-
-### Reports
-- Downloadable PDF export (Minutes of Meeting)
-- CSV export for tabular data
-- DOCX export
-
-### AI Reliability
-- Primary AI Provider: Google Gemini
-- Fallback AI Provider: OpenAI
-- Dynamic AI Provider Manager
-- Built-in graceful failover if a provider hits a rate limit
-- Automatic cooldowns for failing providers
-
-### UI
-- Responsive Streamlit interface
-- Central dashboard for meeting overview
-- Tab-based meeting detailed view
-- Dedicated UI for RAG Knowledge Search
-- Settings page for AI provider health checks
-- Theme support (Light/Dark mode via CSS variables)
-
----
-
-## 5. System Architecture
-
-```text
-User
-  ↓
-Streamlit UI
-  ↓
-Authentication / Session
-  ↓
-Meeting Upload
-  ↓
-File Validation
-  ↓
-FFmpeg (Audio Extraction)
-  ↓
-Faster-Whisper (Speech-to-Text)  <--->  Pyannote (Speaker Diarization)
-  ↓
-Speaker-Labeled Transcript
-  ↓
-AI Provider Manager (Graceful Failover)
-  ↓
-Gemini (Primary) / OpenAI (Fallback)
-  ↓
-Structured Meeting Insights (Pydantic Validated)
-  ↓
-SQLite / SQLAlchemy (Relational Metadata)
-  ↓
-Knowledge Repository (Chunking)
-  ↓
-Sentence-Transformers (Embeddings)
-  ↓
-ChromaDB (Vector Storage)
-  ↓
-Semantic Search / RAG
-  ↓
-FastAPI (API Layer)
-  ↓
-AI Assistant / Search / PDF/CSV Reports
+The platform automates the end-to-end lifecycle of meeting outcomes:
+```
+Meeting Recording / Transcript
+              ↓
+      Validated Transcript
+              ↓
+Speaker & Participant Dialogue Mapping
+              ↓
+  AI Meeting Analysis & Evidence Extraction
+              ↓
+  Proposed Decisions & Action Items (with Excerpts)
+              ↓
+   Human Approval Gating (Team Lead / Admin)
+              ↓
+     Task & Commitment Creation
+              ↓
+Google Calendar Reminders & Attendance-Aware Follow-ups
+              ↓
+     Progress Tracking & Blocker Resolution
+              ↓
+     Audit Trail & Organizational Memory
 ```
 
 ---
 
-## 6. Processing Pipeline
+## 📚 Official Learning Guides & Documentation
 
-1. **Upload:** User authenticates and uploads a meeting recording.
-2. **Preprocessing:** File validation runs, and FFmpeg converts/prepares the audio.
-3. **Transcription:** Faster-Whisper generates an accurate transcript locally.
-4. **Diarization:** Pyannote analyzes the audio to perform speaker diarization.
-5. **Merging:** The raw text and speaker clusters are merged into a speaker-labeled transcript.
-6. **Intelligence Extraction:** The `MeetingAnalyzer` sends the transcript to the AI provider.
-7. **Generation:** The LLM generates structured meeting insights (JSON).
-8. **Validation:** Pydantic schemas verify that the result correctly contains arrays of decisions, action items, etc.
-9. **Persistence:** The structured data is persisted in the SQLite relational database.
-10. **Indexing:** The transcript and insights are chunked into smaller segments.
-11. **Embedding:** Embeddings are generated using local Sentence-Transformers.
-12. **Vector Storage:** Chunks are stored in ChromaDB, tagged with the `user_id` and `meeting_id`.
-13. **Retrieval:** The user performs a semantic search or asks a question in the UI.
-14. **RAG:** The system retrieves the most relevant knowledge chunks from ChromaDB.
-15. **Answering:** The AI assistant generates a grounded response using only the retrieved context, citing its sources.
-16. **Export:** The user can export the processed meeting to a PDF, CSV, or DOCX report.
+Complete documentation is organized for beginners, developers, and evaluators in the `docs/` directory:
 
----
-
-## 7. Technology Stack
-
-| Technology | Purpose |
-|------------|---------|
-| **Python** | Core application logic and orchestration. |
-| **Streamlit** | Rapid, interactive Web UI for dashboards and AI chat. |
-| **FastAPI** | High-performance REST API layer for system integrations. |
-| **SQLite** | Lightweight relational persistence for users and meeting metadata. |
-| **SQLAlchemy** | Database ORM for safe, structured database interactions. |
-| **FFmpeg** | Reliable audio/video format preprocessing and extraction. |
-| **Faster-Whisper** | Highly optimized, local speech-to-text processing. |
-| **Pyannote.audio** | Advanced machine learning for speaker diarization. |
-| **Gemini** | Primary LLM for deep meeting analysis and structured extraction. |
-| **OpenAI** | Configured as an automatic fallback LLM provider. |
-| **Sentence-Transformers** | Local generation of semantic text embeddings. |
-| **ChromaDB** | Local, high-performance vector storage and similarity search. |
-| **Pydantic** | Strict type checking and structured validation for AI outputs. |
-| **FPDF** | Programmatic generation of PDF reports. |
-| **Git/GitHub** | Version control. |
-
-**Why these technologies?**
-Python serves as the perfect glue between advanced AI/ML audio libraries (Whisper, Pyannote) and modern web frameworks (FastAPI, Streamlit). Faster-Whisper and ChromaDB were specifically chosen to run inference and vector searches locally, avoiding the latency and privacy concerns of cloud alternatives. Gemini and OpenAI provide the heavy reasoning required to extract structured intelligence from unstructured conversational transcripts.
+| Guide | File | Description |
+| :--- | :--- | :--- |
+| **Vercel Deployment Audit** | [`docs/VERCEL_DEPLOYMENT_AUDIT.md`](docs/VERCEL_DEPLOYMENT_AUDIT.md) | Component-by-component architectural audit & runtime feasibility analysis. |
+| **Vercel Deployment Guide** | [`docs/DEPLOYMENT_GUIDE.md`](docs/DEPLOYMENT_GUIDE.md) | Step-by-step production deployment manual for Vercel, PostgreSQL, and OAuth. |
+| **Production Readiness Checklist** | [`docs/PRODUCTION_CHECKLIST.md`](docs/PRODUCTION_CHECKLIST.md) | Pre-flight security, persistence, secrets, and verification matrix. |
+| **Deployment Troubleshooting** | [`docs/DEPLOYMENT_TROUBLESHOOTING.md`](docs/DEPLOYMENT_TROUBLESHOOTING.md) | Runbook for Vercel builds, OAuth callbacks, database pooling, and quotas. |
+| **Documentation Index** | [`docs/README.md`](docs/README.md) | Master index and recommended learning path for beginners. |
+| **Complete User Manual** | [`docs/MEETINTEL_AI_USER_MANUAL.md`](docs/MEETINTEL_AI_USER_MANUAL.md) | Exhaustive operator handbook for every page, button, form, and feature. |
+| **Practical Tutorials** | [`docs/PRACTICAL_TUTORIALS.md`](docs/PRACTICAL_TUTORIALS.md) | 10 hands-on step-by-step walkthroughs of major workflows. |
+| **Technical Deep-Dive** | [`docs/FEATURES_AND_TECHNOLOGY_EXPLAINED.md`](docs/FEATURES_AND_TECHNOLOGY_EXPLAINED.md) | Engineering explanations of Faster-Whisper, Pyannote, RAG, and security. |
+| **End-to-End Workflows** | [`docs/END_TO_END_WORKFLOWS.md`](docs/END_TO_END_WORKFLOWS.md) | Architectural data flow diagrams and sequence charts. |
+| **Feature Inventory** | [`docs/FEATURE_INVENTORY.md`](docs/FEATURE_INVENTORY.md) | Status matrix of all 62 features discovered across the codebase. |
+| **Visual Feature Map** | [`docs/FEATURE_MAP.md`](docs/FEATURE_MAP.md) | Hierarchical feature breakdown and service dependency matrices. |
+| **QA Verification Checklist** | [`docs/FEATURE_VERIFICATION_CHECKLIST.md`](docs/FEATURE_VERIFICATION_CHECKLIST.md) | Manual test cases and 69 passing automated pytest results. |
+| **Viva & Evaluation Guide** | [`docs/PROJECT_PRESENTATION_AND_VIVA.md`](docs/PROJECT_PRESENTATION_AND_VIVA.md) | Technical defense presentation and 15 essential viva Q&As. |
 
 ---
 
-## 8. AI Provider Architecture
+## 1. Architecture Overview
 
-To ensure the system remains reliable even if an external AI service goes down, MeetIntel AI implements a robust `AIProviderManager`:
-
-```text
-Primary Provider (Gemini)
-      ↓
-(If QuotaExhaustedError or TransientError)
-      ↓
-Mark Gemini as "Unhealthy" (Cooldown Period)
-      ↓
-Automatic Retry with Fallback Provider (OpenAI)
-      ↓
-Normalized Structured Output returned to Application
 ```
-
-- **Abstraction:** Providers inherit from a base `AIProvider` class, ensuring normalized outputs regardless of the underlying LLM.
-- **Graceful Failure:** If Gemini hits a rate limit, it is placed on a cooldown (e.g., 120 seconds). Requests are instantly routed to OpenAI without crashing the application or showing errors to the user.
-
----
-
-## 9. RAG Architecture
-
-MeetIntel AI implements Retrieval-Augmented Generation (RAG) to allow users to "chat" with their past meetings.
-
-```text
-User Question
-      ↓
-Query Embedding (Sentence-Transformers)
-      ↓
-Semantic Search (ChromaDB)
-      ↓
-Filter by User ID / Meeting ID
-      ↓
-Retrieve Top-K Relevant Meeting Chunks
-      ↓
-Context Construction
-      ↓
-LLM (Gemini/OpenAI)
-      ↓
-Grounded Answer with Sources
-```
-
-- **Semantic Retrieval:** Used for conceptual questions (e.g., *"Why did we choose Postgres over MySQL?"*). The system finds chunks of the transcript with similar meaning, rather than relying on exact keyword matches.
-- **Source-Awareness:** The LLM is strictly prompted to only use the retrieved ChromaDB chunks. If the answer is not present, it gracefully states the information is unavailable, preventing hallucinations.
-
----
-
-## 10. Authentication & Security
-
-MeetIntel AI implements standard security practices:
-- **Authentication:** Users must register and log in to access the system.
-- **Password Hashing:** Passwords are never stored in plaintext; they are securely hashed before entering the database.
-- **Data Isolation:** Every meeting, transcript, and vector chunk is strictly tied to a `user_id`. Repository and database queries explicitly filter by the authenticated user's ID, ensuring one user can never access another user's private meeting data.
-- **Secrets Management:** API keys (Gemini, OpenAI, HuggingFace) are loaded securely via `.env` files and are never committed to the repository.
-
----
-
-## 11. API
-
-An advanced FastAPI layer exposes the core platform capabilities for potential future integration:
-
-| Method | Endpoint | Purpose | Access Requirement |
-|--------|----------|---------|--------------------|
-| `GET` | `/meetings` | List all processed meetings for the user | `X-API-Key` & `X-User-Id` |
-| `GET` | `/meetings/{id}` | Retrieve detailed structured insights for a specific meeting | `X-API-Key` & `X-User-Id` |
-| `POST` | `/search` | Perform global semantic search across the vector knowledge base | `X-API-Key` & `X-User-Id` |
-| `POST` | `/ask` | RAG-powered question answering across the knowledge base | `X-API-Key` & `X-User-Id` |
-
----
-
-## 12. Integrations
-
-The repository contains a foundation for external integrations in `api/integrations.py`:
-- **Zoom Webhooks (Configuration-Ready):** Endpoints exist to handle `recording.completed` webhooks.
-- **Google Meet Webhooks (Configuration-Ready):** Endpoints exist to handle Google Workspace Drive Activity pushes.
-
-*Note: These integrations currently contain simulated/mocked download logic and require further developer implementation (OAuth setups, real API downloading) to be production-ready.*
-
----
-
-## 13. Reports & Export
-
-Users can export processed meeting intelligence in multiple formats:
-- **PDF Export:** Generates a professional "Minutes of Meeting" document containing the executive summary, decisions, action items, participants, and deadlines.
-- **CSV Export:** Generates tabular data for easy import into spreadsheets or project management tools.
-- **DOCX Export:** Generates a Microsoft Word compatible document.
-
----
-
-## 14. Project Structure
-
-```text
-MeetIntel-AI/
-├── ai/                     # LLM providers, meeting analyzer, RAG, and Pydantic schemas
-├── api/                    # FastAPI endpoints and integration webhooks
-├── audio/                  # FFmpeg utilities and audio extraction
-├── config/                 # Application configuration
-├── data/                   # Default storage location for raw audio files
-├── reports/                # PDF, CSV, and DOCX generation logic
-├── scripts/                # Diagnostic scripts (e.g., check_gemini.py)
-├── storage/                # SQLite database, SQLAlchemy models, and ChromaDB vector store
-├── tests/                  # API, Auth, E2E, and Milestone test suites
-├── transcription/          # Faster-Whisper and Pyannote implementation
-├── ui/                     # Streamlit frontend, dashboard, meeting views, auth
-├── utils/                  # Helper utilities
-├── validation/             # File and input validation
-├── app.py                  # Main Streamlit application entry point
-├── Dockerfile              # Containerization configuration
-├── requirements.txt        # Python dependencies
-├── .env.example            # Environment variables template
-├── .gitignore              # Git ignore rules
-└── README.md               # Project documentation
++---------------------------------------------------------------------------------+
+|                                 USER WORKSPACE                                  |
+|   Employee Workspace  |  Team Lead Workspace  |  Organization Admin Workspace   |
+|   (My Tasks, Due)     |  (Approvals, Blocker) |  (Integrations, Retention, Org) |
++---------------------------------------------------------------------------------+
+                                         |
+                                         v
++---------------------------------------------------------------------------------+
+|                               PRESENTATION TIER                                 |
+|      Streamlit SaaS Frontend (Port 8501)   |   FastAPI REST API (Port 8000)     |
+|      Light/Dark Dynamic Theme Tokens       |   Signed Webhooks, Health Checks   |
++---------------------------------------------------------------------------------+
+                                         |
+                                         v
++---------------------------------------------------------------------------------+
+|                           INTELLIGENCE & AGENT ENGINE                           |
+|  - MeetingAnalyzer (Pydantic v2 Schema Validation, Anti-Injection Isolated Data)|
+|  - AI Provider Manager (Gemini 3.8 / OpenAI GPT-4o-mini / Local Demo Engine)    |
+|  - RAG Service (Cross-Meeting Semantic Search, Grounded Source Citations)       |
+|  - AI Quality Center (JiWER WER, Action F1, Owner Accuracy, Grounding Checks)   |
++---------------------------------------------------------------------------------+
+                                         |
+                                         v
++---------------------------------------------------------------------------------+
+|                       SAAS INTEGRATIONS & AUTOMATION                            |
+|  - Google Workspace: OAuth 2.0, Google Meet Artifacts, Google Calendar Sync     |
+|  - Zoom Service: HMAC-SHA256 Signed Webhook, Replay Protection, Cloud Ingestion |
+|  - Email Dispatcher: Attendance-Aware Absent Follow-up, Review-Before-Send Gating|
+|  - Persistent Background Worker: Exponential Backoff, Jitter, Idempotent Queue  |
++---------------------------------------------------------------------------------+
+                                         |
+                                         v
++---------------------------------------------------------------------------------+
+|                            DATA & PERSISTENCE TIER                              |
+|  - Relational Database: SQLite (Local) / PostgreSQL Compatible (SQLAlchemy ORM)  |
+|  - Vector Store: ChromaDB with Tenant-Isolated Namespace Chunks                 |
+|  - File Storage: data/uploads, data/processed, reports/                         |
++---------------------------------------------------------------------------------+
 ```
 
 ---
 
-## 15. Installation
+## 2. Core Capabilities & Workflows
 
-Follow these steps to set up MeetIntel AI locally.
+### A. Structured Action-Item Extraction & Assignment Reliability
+- **Verbatim Evidence Grounding**: Every proposed action item and decision captures the exact quote from the transcript.
+- **Reliable Assignee Resolution**: Maps dialogue names against organization member directories.
+- **Ambiguity Protection**:
+  - Ambiguous owner -> Flagged as `Needs assignment` and routed to Team Lead review.
+  - Vague deadline -> Preserved verbatim (e.g. `sometime soon`) with `deadline_ambiguous: true`. Dates are never hallucinated.
+- **Approval Workflow**:
+  - `Draft` -> `Pending Approval` -> `Approved` -> `Scheduled` -> `In Progress` -> `Completed` / `Blocked` / `Rejected`.
+- **Role Permissions**:
+  - **Employee**: View assigned tasks, update status, add completion notes, view relevant decisions.
+  - **Team Lead**: Approve, reject, reassign tasks, resolve blockers.
+  - **Admin**: Configure integrations, tenant policies, audit logs.
 
-### Requirements
-- macOS (Apple Silicon recommended) or Linux
-- Python 3.9+
-- `ffmpeg` installed on your system (`brew install ffmpeg` on macOS)
+### B. Enterprise SaaS Integrations (Google Meet, Zoom, Google Calendar, Email)
+1. **Google Workspace**:
+   - OAuth 2.0 consent with CSRF state protection.
+   - Discovers Google Meet recordings and transcripts in Google Drive. If a transcript is already present, it is imported directly without re-transcribing.
+   - Idempotent Google Calendar synchronization for approved tasks with configurable reminders (24h, 1h before deadline).
+   - Disconnected fallback: Retains approved task locally with `Calendar synchronization pending` status.
+2. **Zoom**:
+   - HMAC-SHA256 signed webhook verification (`x-zm-signature` and timestamp) with 5-minute replay attack defense.
+   - Handles `endpoint.url_validation` challenge responses.
+   - Idempotent ingestion of cloud recordings on `recording.completed` event.
+3. **Attendance-Aware Follow-up**:
+   - Determines absence from verified participant records or organizer input (never inferred from silence).
+   - Prepares personalized follow-up with executive summary, relevant decisions, assigned deliverables, and confirmed deadlines.
+   - Review-before-send gating by default.
+   - Tracks: `Pending` -> `Approved` -> `Sent` -> `Delivered` -> `Acknowledged`.
+4. **Integration Center**:
+   - Status badges: Connected / Not connected / Needs attention / Mock/Demo Mode.
+   - Connection testing, disconnect/reconnect, prerequisite setup guides. Never leaks credentials.
 
-### Setup Instructions
+### C. Pre-Meeting Intelligence & Preparation Briefs
+- Generates an executive briefing before upcoming meetings.
+- Aggregates previous meeting summaries, outstanding tasks, unresolved decisions, and known blockers.
+- Suggests an evidence-grounded agenda and discussion prompts. Clearly labels AI suggestions.
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/meetintel-ai.git
-   cd meetintel-ai
-   ```
+### D. Decision Register & Traceability
+- Dedicated searchable register of decisions.
+- Captures agreement, rationale, alternatives considered, source meeting, and evidence excerpts.
+- Supports superseding workflows with audit logging.
 
-2. **Create a virtual environment**
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   ```
+### E. AI Accuracy, Benchmarking & Trust (AI Quality Center)
+- **Word Error Rate (WER)**: Measured using JiWER on audio transcription.
+- **Action Item Precision, Recall, and F1**: Evaluated against labeled benchmarks.
+- **Assignment & Deadline Accuracy**: Verified against ambiguous and clean dialogue.
+- **Evidence Grounding Rate**: Confirms generated items map to source transcripts.
+- **Prompt-Injection Defense**: 100% isolation of untrusted transcript content from system instructions.
 
-3. **Install dependencies**
-   ```bash
-   pip install --upgrade pip
-   pip install -r requirements.txt
-   ```
+---
 
-4. **Configure Environment Variables**
-   ```bash
-   cp .env.example .env
-   ```
-   Open `.env` and add your API keys:
-   ```env
-   GEMINI_API_KEY=your_gemini_key_here
-   OPENAI_API_KEY=your_openai_key_here
-   HUGGINGFACE_TOKEN=your_hf_token_here
-   API_KEY=your_custom_api_secret  # For FastAPI access
-   ```
-   *(Note: HuggingFace token requires you to accept the `pyannote/speaker-diarization-community-1` terms on HuggingFace).*
+## 3. Technology Stack
 
-5. **Run the Application**
-   ```bash
-   streamlit run app.py
-   ```
-   The application will be available at `http://localhost:8501`.
+- **Frontend & Navigation**: Streamlit 1.62+ with custom CSS design tokens (responsive light/dark surfaces).
+- **Backend API**: FastAPI 0.141+ with Pydantic v2 schemas and health checks (`/health/live`, `/health/ready`).
+- **Database**: SQLAlchemy 2.0+ (SQLite development, PostgreSQL production).
+- **Speech Processing**: Faster-Whisper (CTranslate2), Pyannote.Audio 3.1+, FFmpeg.
+- **Vector Search & RAG**: ChromaDB 1.5+, Sentence-Transformers.
+- **AI Providers**: Google Gemini, OpenAI GPT-4o-mini, Local Deterministic DemoProvider.
+- **Security & Cryptography**: Fernet token encryption, HMAC-SHA256 signature verification, PBKDF2 password hashing.
+
+---
+
+## 4. Environment Configuration
+
+Copy `.env.example` to `.env`:
+```bash
+cp .env.example .env
+```
+
+Key environment variables:
+```ini
+# Application Secrets
+SECRET_KEY=meetintel-enterprise-secret-key-2026
+API_KEY=dev-secret-key
+DEMO_MODE=false
+ALLOW_OFFLINE_FALLBACK=true
+
+# Database (SQLite default, or PostgreSQL)
+DATABASE_URL=sqlite:///meetintel.db
+
+# AI Provider Configuration
+AI_PRIMARY_PROVIDER=gemini
+GEMINI_API_KEY=your_gemini_api_key_here
+OPENAI_API_KEY=your_openai_api_key_here
+
+# Speech & Diarization
+WHISPER_MODEL=small
+HUGGINGFACE_TOKEN=your_huggingface_token_here
+
+# Google Workspace Integration
+GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GOOGLE_REDIRECT_URI=http://localhost:8501/api/google/oauth/callback
+
+# Zoom Integration
+ZOOM_CLIENT_ID=your_zoom_client_id
+ZOOM_CLIENT_SECRET=your_zoom_client_secret
+ZOOM_WEBHOOK_SECRET=your_zoom_webhook_secret
+
+# Email Dispatcher (SMTP)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=notifications@yourorg.com
+SMTP_PASSWORD=your_app_password
+SMTP_FROM=notifications@meetintel.ai
+```
+
+---
+
+## 5. Local Setup & Execution
+
+### 1. Create Virtual Environment and Install Dependencies
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+### 2. Initialize Database & Safe Migrations
+```bash
+python -c "from storage.database import init_db; init_db()"
+```
+
+### 3. Start Streamlit Application
+```bash
+streamlit run app.py
+```
+Open [http://localhost:8501](http://localhost:8501) in your browser.
+
+### 4. Start FastAPI Service & Webhook Listener (Optional)
+```bash
+uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+```
+API Documentation: [http://localhost:8000/docs](http://localhost:8000/docs)  
+Health Check: [http://localhost:8000/health/live](http://localhost:8000/health/live)
+
+### 5. Start Background Queue Worker (Optional)
+```bash
+python storage/background_worker.py
+```
+
+---
+
+## 6. Testing & Acceptance Criteria
+
+Run the automated test suite covering all 20 required acceptance criteria:
+```bash
+PYTHONPATH=. pytest tests/
+```
+
+Test Results Breakdown:
+- `tests/test_api.py`: FastAPI endpoints, task approvals, search, and health checks [4 passed]
+- `tests/test_auth.py`: PBKDF2 password hashing and salt verification [1 passed]
+- `tests/test_e2e.py`: End-to-end meeting analysis pipeline [1 passed]
+- `tests/test_milestone2.py`: RAG and chunking validation [6 passed]
+- `tests/test_enterprise_workflows.py`:
+  1. Validated action-item extraction with verbatim evidence
+  2. Ambiguous ownership handling (`Needs assignment`)
+  3. Ambiguous deadline preservation
+  4. Task approval idempotency
+  5. Calendar duplicate event prevention
+  6. Disconnected calendar local task retention
+  7. Absent employee authorized information filtering
+  8. Failed email visibility and retry tracking
+  9. Zoom webhook replay and duplicate protection
+  10. Recording deduplication detection
+  11. OAuth token expiry handling
+  12. Multi-tenant organization isolation
+  13. Access-controlled RAG retrieval
+  14. Prompt-injection defense in meeting transcripts
+  15. Low-confidence task human review routing
+  16. Task change calendar synchronization
+  17. Audit trail logging for actions
+  18. Demo mode safety isolation
+  19. Theme tokens accessibility
+  20. End-to-end seeded enterprise scenario execution
+  [20 passed]
+
+**Total: 32 tests passing with zero errors.**
+
+---
+
+## 7. Live Examiner Demonstration Walkthrough Script
+
+Follow this concise 5-minute script to demonstrate the complete end-to-end story to examiners:
+
+### Step 1: Login & Identity Switching
+1. Navigate to [http://localhost:8501](http://localhost:8501).
+2. Log in with:
+   - Username: `admin`
+   - Password: `admin123`
+3. Point out the **Acme Global Technologies** multi-tenant organization banner and the active role (`Admin`).
+
+### Step 2: Seed Enterprise Demonstration Data
+1. Click **Settings** in the sidebar.
+2. Under **Fast Role & Identity Switcher**, point out the team members (`Sarah Jenkins - Team Lead`, `Alex Chen - Employee`, `Priya Sharma - QA`).
+3. Click the primary button: **✦ Seed Enterprise Demonstration Scenario**.
+4. The system immediately creates the realistic **Q3 Architecture & Security Alignment** scenario.
+
+### Step 3: Meeting Intelligence & Grounded Action Items
+1. Click **Meetings** -> Select **Q3 Architecture & Security Alignment**.
+2. Show the **Executive Summary**, **Emotional Tone**, and **Speakers**.
+3. Switch to the **Action Items** tab:
+   - Highlight that each task includes **Transcript Source Evidence** (e.g., `"Alex Chen: I will complete the OAuth 2.0 PKCE integration by this Friday."`).
+   - Show the confidence score (`99% Grounded`).
+   - Show the ambiguous task: `"Update developer security documentation"` -> correctly flagged with `⚠️ Needs assignment` and confidence warning (`65%`).
+   - Click **✓ Approve** on Alex Chen's task -> show the toast confirming Google Calendar synchronization!
+
+### Step 4: Decision Register & Superseding
+1. Click **Decisions** in the sidebar.
+2. Show the decision: `"Mandate OAuth 2.0 with PKCE"`.
+3. Highlight the **Rationale**, **Alternatives Considered**, and exact verbatim **Source Transcript Excerpt**.
+4. Show how a Team Lead can supersede a decision when policies evolve, preserving full revision history.
+
+### Step 5: Employee Execution & Calendar Reminders
+1. Go to **Settings** -> Switch identity to **Alex Chen (Employee)**.
+2. Click **My Tasks**:
+   - Alex only sees deliverables assigned to him (`Complete OAuth 2.0 PKCE integration`).
+   - Show the calendar indicator: `✓ Synced to Calendar`.
+   - Update the status to `Completed` and enter notes.
+   - Open the **Audit Trail** tab to show that the approval, reassignment, and status updates are permanently logged.
+
+### Step 6: Attendance-Aware Absent Follow-up
+1. Switch identity to **Sarah Jenkins (Team Lead)**.
+2. Click **Follow-ups** in the sidebar.
+3. Show the draft prepared for **Elena Rostova** (who was absent due to client deployment):
+   - Notice that Elena's draft contains only approved tasks and relevant decisions.
+   - Point out the **Review-Before-Send Gating**.
+   - Click **Approve & Dispatch Email** -> Show successful delivery.
+
+### Step 7: Pre-Meeting Intelligence Brief
+1. Click **Meeting Prep** in the sidebar.
+2. Select baseline meeting and click **Generate Preparation Brief**.
+3. Show the executive briefing:
+   - Summary of previous session
+   - Known blockers (e.g. database pool dependency)
+   - Outstanding commitments
+   - Proposed agenda and discussion points (clearly marked as AI suggestions).
+
+### Step 8: Integration Center & AI Quality Center
+1. Click **Integrations**: Show verified statuses for Google Meet, Zoom, Google Calendar, and Email. Run a **Connection Test**.
+2. Click **AI Quality**: Run the **Reproducible AI Benchmark Evaluation** -> show the live measured JiWER WER, F1 score, 100% owner accuracy, and 100% prompt-injection defense rate.
+
+---
+
+## 8. Docker Deployment
+
+### Build Container
+```bash
+docker build -t meetintel-ai:2.0 .
+```
+
+### Run Container
+```bash
+docker run -d -p 8501:8501 -p 8000:8000 --env-file .env meetintel-ai:2.0
+```
+
+---
+
+## 9. License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.

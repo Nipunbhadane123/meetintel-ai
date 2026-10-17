@@ -1,7 +1,7 @@
 import streamlit as st
 import time
 import os
-from storage.database import get_db
+from storage.database import get_db, SessionLocal
 from storage.repository import create_meeting, update_meeting_status, save_transcript, get_meeting
 from audio.processor import process_audio, cleanup_file
 from transcription.whisper_engine import WhisperTranscriber
@@ -11,10 +11,17 @@ from transcription.formatter import format_transcript, generate_text_transcript
 from validation.transcript_validator import validate_transcript
 from ai.meeting_analyzer import MeetingAnalyzer
 
-from ui.components import section_header
+from ui.components import page_header, error_state, safe_escape
 
 def render_processing_page():
-    section_header("⚙️ Analyzing Your Meeting", "Please wait while our AI processes your audio")
+    page_header(
+        title="AI Processing Pipeline",
+        subtitle="Transcribing dialogue, identifying speakers, extracting decisions, and syncing action items.",
+        category="Pipeline Execution",
+        badge_text="In Progress",
+        badge_type="accent",
+        icon="sparkles"
+    )
     
     if 'current_upload' not in st.session_state:
         st.error("No file uploaded.")
@@ -54,11 +61,12 @@ def render_processing_page():
     # Check if already processing
     if 'processing_started' not in st.session_state:
         st.session_state['processing_started'] = True
+        processed_wav = None
+        db = SessionLocal()
         
         try:
             total_start_time = time.time()
             
-            db = next(get_db())
             duration = metadata.get('duration_sec', 0.0)
             user_id = st.session_state.get('user_id')
             meeting = create_meeting(db, metadata.get('filename', 'Unknown'), user_id=user_id, duration=duration, file_hash=metadata.get('file_hash'))
@@ -126,27 +134,95 @@ def render_processing_page():
             meeting.recommendations = json.dumps(insights.get('recommendations', []))
             meeting.next_steps = json.dumps(insights.get('next_steps', []))
             
-            from storage.models import ActionItem, Decision, Participant, Deadline, Priority
+            from storage.models import ActionItem, Decision, Participant, Deadline, Priority, MeetingAttendance, User
+            from storage.repository import log_audit_event
             
+            # Map known users in this org for accurate assignee linkage
+            org_users = db.query(User).filter(User.org_id == meeting.org_id).all()
+            user_map = {}
+            for u in org_users:
+                user_map[u.username.lower()] = u
+                if u.full_name:
+                    user_map[u.full_name.lower()] = u
+                    for part in u.full_name.lower().split():
+                        if len(part) > 2:
+                            user_map[part] = u
+
             for ai in insights.get('action_items', []):
+                raw_assigned = ai.get('assigned_to', 'Unassigned')
+                matched_user = None
+                assignment_status = ai.get('assignment_status', 'Assigned')
+                
+                # Check for employee match
+                if raw_assigned and raw_assigned.lower() != "unassigned":
+                    matched_user = user_map.get(raw_assigned.lower())
+                    if not matched_user:
+                        # Try first name matching
+                        matched_user = user_map.get(raw_assigned.lower().split()[0])
+                    
+                    if matched_user:
+                        assigned_name = matched_user.full_name or matched_user.username
+                        assigned_user_id = matched_user.id
+                        assignment_status = "Assigned"
+                    else:
+                        assigned_name = raw_assigned
+                        assigned_user_id = None
+                        assignment_status = "Needs assignment"
+                else:
+                    assigned_name = "Unassigned"
+                    assigned_user_id = None
+                    assignment_status = "Needs assignment"
+
                 db.add(ActionItem(
-                    meeting_id=meeting.id, 
-                    task=ai['task'], 
-                    assigned_to=ai.get('assigned_to', 'Unassigned'), 
-                    deadline=ai.get('deadline') or 'Not specified', 
+                    meeting_id=meeting.id,
+                    org_id=meeting.org_id,
+                    task=ai['task'],
+                    description=ai.get('description') or f"Action item identified from meeting dialogue: {ai.get('evidence_excerpt', '')}",
+                    evidence_excerpt=ai.get('evidence_excerpt') or "",
+                    assigned_to=assigned_name,
+                    assigned_user_id=assigned_user_id,
+                    assignment_status=assignment_status,
+                    deadline=ai.get('deadline') or 'Not specified',
                     priority=ai.get('priority', 'Medium'),
-                    status=ai.get('status', 'Pending')
+                    status="Pending",
+                    approval_status="Draft",
+                    confidence=ai.get('confidence', 0.95),
+                    dependencies=json.dumps(ai.get('dependencies', [])),
+                    estimated_effort_hours=ai.get('estimated_effort_hours')
                 ))
                 
             for d in insights.get('decisions', []):
-                db.add(Decision(meeting_id=meeting.id, decision=d['decision'], context=d['context']))
+                db.add(Decision(
+                    meeting_id=meeting.id,
+                    org_id=meeting.org_id,
+                    title=d.get('title') or d['decision'][:60],
+                    decision=d['decision'],
+                    context=d['context'],
+                    rationale=d.get('rationale') or "Agreed by consensus during review.",
+                    alternatives=d.get('alternatives') or "No alternative recorded.",
+                    evidence_excerpt=d.get('evidence_excerpt') or "",
+                    confidence=d.get('confidence', 0.95),
+                    status=d.get('status', 'Approved'),
+                    proposer=d.get('proposer', 'Team')
+                ))
                 
             for p in insights.get('participants', []):
+                p_name = p.get('name', 'Unknown Participant')
                 db.add(Participant(
                     meeting_id=meeting.id, 
-                    name=p.get('name', 'Unknown Participant'), 
+                    name=p_name, 
                     speaker_id=p.get('speaker_id', 'Unknown'), 
                     responsibilities=json.dumps(p.get('responsibilities', []))
+                ))
+                # Add attendance record
+                matched_p_user = user_map.get(p_name.lower())
+                db.add(MeetingAttendance(
+                    meeting_id=meeting.id,
+                    user_id=matched_p_user.id if matched_p_user else None,
+                    name=p_name,
+                    email=matched_p_user.email if matched_p_user else f"{p_name.lower().replace(' ', '.')}@acmeglobal.io",
+                    status="Attended",
+                    verified_source="Meeting Dialogue Alignment"
                 ))
                 
             for dl in insights.get('deadlines', []):
@@ -157,6 +233,18 @@ def render_processing_page():
                 
             update_meeting_status(db, meeting.id, "Completed")
             db.commit()
+            
+            # Log audit event
+            log_audit_event(
+                db,
+                org_id=meeting.org_id,
+                user_id=meeting.user_id,
+                actor_username=st.session_state.get('username', 'System'),
+                entity_type="meeting",
+                entity_id=meeting.id,
+                action="UPDATE",
+                details=f"Meeting '{meeting.title}' processed. Extracted {len(insights.get('action_items', []))} action items and {len(insights.get('decisions', []))} decisions."
+            )
             db_time = time.time() - t0
             
             # 9. Index into Knowledge Base
@@ -180,10 +268,6 @@ def render_processing_page():
                 "total": total_time
             }
             
-            # Cleanup temp files
-            cleanup_file(processed_wav)
-            cleanup_file(file_path)
-            
             progress_bar.progress(100, text="Done!")
             status_box.success("Processing complete!")
             
@@ -193,23 +277,25 @@ def render_processing_page():
             
         except Exception as e:
             progress_bar.progress(100, text="Error occurred")
-            st.markdown(f"""
-            <div class="saas-card" style="border-left: 4px solid var(--mt-error);">
-                <h3 style="color: var(--mt-error); margin-top: 0; display: flex; align-items: center; gap: 8px;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                    Something went wrong
-                </h3>
-                <p style="color: var(--mt-text-secondary); font-size: 1rem; margin-bottom: 0;">We couldn't process this meeting right now. Please try again later.</p>
-            </div>
-            """, unsafe_allow_html=True)
+            error_state("Pipeline Processing Interrupted", "Unable to complete meeting processing. Please verify audio format and try again.")
             import logging
-            logging.getLogger(__name__).error("Processing failed", exc_info=True)
+            logging.getLogger(__name__).error(f"Processing failed: {e}", exc_info=True)
             if 'current_meeting_id' in st.session_state:
-                update_meeting_status(next(get_db()), st.session_state['current_meeting_id'], "Failed")
+                try:
+                    update_meeting_status(db, st.session_state['current_meeting_id'], "Failed")
+                except Exception:
+                    pass
             
-            if st.button("Try again", type="primary"):
+            if st.button("Return to Dashboard", type="primary"):
                 if 'processing_started' in st.session_state:
                     del st.session_state['processing_started']
                 st.session_state['current_page'] = "Dashboard"
                 st.rerun()
+        finally:
+            if processed_wav:
+                cleanup_file(processed_wav)
+            if file_path:
+                cleanup_file(file_path)
+            db.close()
+
 

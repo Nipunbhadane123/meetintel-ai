@@ -1,0 +1,104 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --mt-primary: #6C4DFF;
+  --mt-primary-dark: #5536E8;
+  --mt-primary-light: #F0ECFF;
+  --mt-primary-subtle: rgba(108, 77, 255, 0.08);
+  --mt-secondary: #7C3AED;
+  --mt-accent: #F0ECFF;
+  --mt-cyan: #06B6D4;
+
+  --mt-bg: #F7F8FC;
+  --mt-surface: #FFFFFF;
+  --mt-surface-soft: #F1F4F9;
+  --mt-surface-hover: #F8FAFD;
+
+  --mt-text: #172033;
+  --mt-text-secondary: #73809A;
+  --mt-text-muted: #94A3B8;
+
+  --mt-border: #E9ECF4;
+  --mt-border-light: #F1F4F9;
+  --mt-border-focus: #6C4DFF;
+
+  --mt-success: #169B69;
+  --mt-success-bg: rgba(22, 155, 105, 0.08);
+  --mt-success-border: rgba(22, 155, 105, 0.22);
+
+  --mt-warning: #D98A16;
+  --mt-warning-bg: rgba(217, 138, 22, 0.08);
+  --mt-warning-border: rgba(217, 138, 22, 0.22);
+
+  --mt-error: #DC4C64;
+  --mt-error-bg: rgba(220, 76, 100, 0.08);
+  --mt-error-border: rgba(220, 76, 100, 0.22);
+
+  --mt-info: #2563EB;
+  --mt-info-bg: rgba(37, 99, 235, 0.08);
+  --mt-info-border: rgba(37, 99, 235, 0.22);
+}
+
+.dark {
+  --mt-primary: #856EFF;
+  --mt-primary-dark: #6C4DFF;
+  --mt-primary-light: rgba(108, 77, 255, 0.16);
+  --mt-primary-subtle: rgba(133, 110, 255, 0.12);
+  --mt-secondary: #A78BFA;
+  --mt-accent: #1E1B4B;
+  --mt-cyan: #22D3EE;
+
+  --mt-bg: #0D111D;
+  --mt-surface: #161D2E;
+  --mt-surface-soft: #1C253B;
+  --mt-surface-hover: #202B44;
+
+  --mt-text: #F1F5F9;
+  --mt-text-secondary: #94A3B8;
+  --mt-text-muted: #64748B;
+
+  --mt-border: #232D42;
+  --mt-border-light: #1C253B;
+  --mt-border-focus: #856EFF;
+
+  --mt-success: #34D399;
+  --mt-success-bg: rgba(52, 211, 153, 0.12);
+  --mt-success-border: rgba(52, 211, 153, 0.3);
+
+  --mt-warning: #FBBF24;
+  --mt-warning-bg: rgba(251, 191, 36, 0.12);
+  --mt-warning-border: rgba(251, 191, 36, 0.3);
+
+  --mt-error: #F87171;
+  --mt-error-bg: rgba(248, 113, 113, 0.12);
+  --mt-error-border: rgba(248, 113, 113, 0.3);
+
+  --mt-info: #60A5FA;
+  --mt-info-bg: rgba(96, 165, 250, 0.12);
+  --mt-info-border: rgba(96, 165, 250, 0.3);
+}
+
+body {
+  background-color: var(--mt-bg);
+  color: var(--mt-text);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--mt-border);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--mt-text-muted);
+}

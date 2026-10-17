@@ -28,8 +28,8 @@ class MeetingAnalyzer:
         logger.info(f"Ask AI completed in {time.time() - start:.2f}s")
         return res
 
-    def rag_ask(self, question: str, user_id: str = None, meeting_id: str = None) -> dict:
-        """Ask a question using RAG over the knowledge repository."""
+    def rag_ask(self, question: str, user_id: str = None, meeting_id: str = None, org_id: str = None) -> dict:
+        """Ask a question using RAG over the knowledge repository with tenant boundary."""
         from ai.rag import RAGService
         service = RAGService()
-        return service.ask(question, user_id=user_id, meeting_id=meeting_id)
+        return service.ask(question, user_id=user_id, meeting_id=meeting_id, org_id=org_id)

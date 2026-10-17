@@ -46,9 +46,11 @@ class VectorStore:
             where={"meeting_id": meeting_id}
         )
         
-    def search(self, query_embedding: List[float], user_id: Optional[str] = None, meeting_id: Optional[str] = None, content_type: Optional[str] = None, top_k: int = 5) -> List[Dict[str, Any]]:
-        """Search vectors."""
+    def search(self, query_embedding: List[float], user_id: Optional[str] = None, meeting_id: Optional[str] = None, content_type: Optional[str] = None, org_id: Optional[str] = None, top_k: int = 5) -> List[Dict[str, Any]]:
+        """Search vectors with optional tenant, user, meeting, and content-type isolation."""
         where_clause = {}
+        if org_id:
+            where_clause["org_id"] = org_id
         if user_id:
             where_clause["user_id"] = user_id
         if meeting_id:

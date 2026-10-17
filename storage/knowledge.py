@@ -46,6 +46,7 @@ class KnowledgeRepository:
                     metadatas.append({
                         "meeting_id": meeting_id,
                         "user_id": meeting.user_id,
+                        "org_id": meeting.org_id or "org-default-001",
                         "meeting_title": meeting.title or "Untitled",
                         "meeting_date": str(meeting.date) if meeting.date else "",
                         "content_type": "transcript",
@@ -64,6 +65,7 @@ class KnowledgeRepository:
                     metadatas.append({
                         "meeting_id": meeting_id,
                         "user_id": meeting.user_id,
+                        "org_id": meeting.org_id or "org-default-001",
                         "meeting_title": meeting.title or "Untitled",
                         "meeting_date": str(meeting.date) if meeting.date else "",
                         "content_type": "summary",
@@ -90,6 +92,7 @@ class KnowledgeRepository:
                     metadatas.append({
                         "meeting_id": meeting_id,
                         "user_id": meeting.user_id,
+                        "org_id": meeting.org_id or "org-default-001",
                         "meeting_title": meeting.title or "Untitled",
                         "meeting_date": str(meeting.date) if meeting.date else "",
                         "content_type": "insight",
@@ -99,9 +102,6 @@ class KnowledgeRepository:
             # 3. Index Decisions, Action Items, etc. (Can be batched as insights)
             insight_texts = []
             if meeting.decisions:
-                # Assuming decisions is a JSON string or similar, but models.py says String.
-                # Actually in the existing code, it is mapped as a related model, wait, let me check models.py
-                # models.py says decisions is a relationship to Decision
                 pass 
                 
             for decision in meeting.decisions:
@@ -111,6 +111,7 @@ class KnowledgeRepository:
                 metadatas.append({
                     "meeting_id": meeting_id,
                     "user_id": meeting.user_id,
+                    "org_id": meeting.org_id or "org-default-001",
                     "meeting_title": meeting.title or "Untitled",
                     "meeting_date": str(meeting.date) if meeting.date else "",
                     "content_type": "decision",
@@ -125,6 +126,7 @@ class KnowledgeRepository:
                 metadatas.append({
                     "meeting_id": meeting_id,
                     "user_id": meeting.user_id,
+                    "org_id": meeting.org_id or "org-default-001",
                     "meeting_title": meeting.title or "Untitled",
                     "meeting_date": str(meeting.date) if meeting.date else "",
                     "content_type": "action_item",
@@ -139,6 +141,7 @@ class KnowledgeRepository:
                 metadatas.append({
                     "meeting_id": meeting_id,
                     "user_id": meeting.user_id,
+                    "org_id": meeting.org_id or "org-default-001",
                     "meeting_title": meeting.title or "Untitled",
                     "meeting_date": str(meeting.date) if meeting.date else "",
                     "content_type": "participant",
@@ -153,6 +156,7 @@ class KnowledgeRepository:
                 metadatas.append({
                     "meeting_id": meeting_id,
                     "user_id": meeting.user_id,
+                    "org_id": meeting.org_id or "org-default-001",
                     "meeting_title": meeting.title or "Untitled",
                     "meeting_date": str(meeting.date) if meeting.date else "",
                     "content_type": "deadline",
@@ -187,8 +191,8 @@ class KnowledgeRepository:
             logger.error(f"Failed to delete meeting {meeting_id} from vector store: {e}")
             return False
             
-    def semantic_search(self, query: str, user_id: Optional[str] = None, meeting_id: Optional[str] = None, top_k: int = 5) -> Dict[str, Any]:
-        """Performs a semantic search across meetings."""
+    def semantic_search(self, query: str, user_id: Optional[str] = None, meeting_id: Optional[str] = None, org_id: Optional[str] = None, top_k: int = 5) -> Dict[str, Any]:
+        """Performs a semantic search across meetings with optional tenant and meeting isolation."""
         start_time = time.time()
         
         # 1. Generate query embedding
@@ -196,7 +200,7 @@ class KnowledgeRepository:
         embedding_time = time.time()
         
         # 2. Vector search
-        results = self.vector_store.search(query_embedding, user_id=user_id, meeting_id=meeting_id, top_k=top_k)
+        results = self.vector_store.search(query_embedding, user_id=user_id, meeting_id=meeting_id, org_id=org_id, top_k=top_k)
         search_time = time.time()
         
         total_time_ms = int((search_time - start_time) * 1000)

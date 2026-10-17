@@ -47,14 +47,14 @@ class RAGService:
         self.repo = get_knowledge_repository()
         self.provider = get_ai_provider()
 
-    def ask(self, question: str, user_id: Optional[str] = None, meeting_id: Optional[str] = None) -> dict:
+    def ask(self, question: str, user_id: Optional[str] = None, meeting_id: Optional[str] = None, org_id: Optional[str] = None) -> dict:
         logger.info(f"[RAG] Query received: {question}")
         start_time = time.time()
         
         mode = QueryRouter.classify(question)
         logger.info(f"[RAG] Query classification: {mode}")
         
-        search_results = self.retrieve(question, mode, user_id, meeting_id)
+        search_results = self.retrieve(question, mode, user_id=user_id, meeting_id=meeting_id, org_id=org_id)
         retrieval_time = time.time() - start_time
         
         chunks_retrieved = len(search_results.get("results", []))
@@ -164,13 +164,15 @@ USER QUESTION:
 {question}
 """
 
-    def retrieve(self, question: str, mode: str, user_id: Optional[str] = None, meeting_id: Optional[str] = None) -> dict:
+    def retrieve(self, question: str, mode: str, user_id: Optional[str] = None, meeting_id: Optional[str] = None, org_id: Optional[str] = None) -> dict:
         results = []
         db = SessionLocal()
         
         try:
             if mode == "DIRECT_DATABASE_LAST":
                 query = db.query(Meeting)
+                if org_id:
+                    query = query.filter(Meeting.org_id == org_id)
                 if user_id:
                     query = query.filter(Meeting.user_id == user_id)
                 if meeting_id:
@@ -180,6 +182,8 @@ USER QUESTION:
                     results.append(self._format_meeting_meta(m))
             elif mode == "DIRECT_DATABASE_LONGEST":
                 query = db.query(Meeting)
+                if org_id:
+                    query = query.filter(Meeting.org_id == org_id)
                 if user_id:
                     query = query.filter(Meeting.user_id == user_id)
                 if meeting_id:
@@ -189,6 +193,8 @@ USER QUESTION:
                     results.append(self._format_meeting_meta(m))
             elif mode == "DIRECT_DATABASE_COUNT":
                 query = db.query(Meeting)
+                if org_id:
+                    query = query.filter(Meeting.org_id == org_id)
                 if user_id:
                     query = query.filter(Meeting.user_id == user_id)
                 if meeting_id:
@@ -206,6 +212,8 @@ USER QUESTION:
                 })
             elif mode == "DIRECT_DATABASE_PARTICIPANTS":
                 query = db.query(Meeting)
+                if org_id:
+                    query = query.filter(Meeting.org_id == org_id)
                 if user_id:
                     query = query.filter(Meeting.user_id == user_id)
                 if meeting_id:
@@ -226,6 +234,8 @@ USER QUESTION:
                         })
             elif mode in ["DIRECT_DATABASE_ACTIONS", "DIRECT_DATABASE_DECISIONS"]:
                 query = db.query(Meeting)
+                if org_id:
+                    query = query.filter(Meeting.org_id == org_id)
                 if user_id:
                     query = query.filter(Meeting.user_id == user_id)
                 if meeting_id:
@@ -258,7 +268,7 @@ USER QUESTION:
                             })
             else:
                 top_k = int(os.getenv("RAG_TOP_K", "15"))
-                sem_results = self.repo.semantic_search(question, user_id=user_id, meeting_id=meeting_id, top_k=top_k)
+                sem_results = self.repo.semantic_search(question, user_id=user_id, meeting_id=meeting_id, org_id=org_id, top_k=top_k)
                 results.extend(sem_results.get("results", []))
                 
         finally:

@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from reports.pdf import generate_pdf
 from reports.docx import generate_docx
-from ui.components import section_header
+from ui.components import section_header, get_icon_svg
 
 REPORTS_DIR = Path("data/reports")
 REPORTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -35,7 +35,10 @@ def generate_mom_text(meeting) -> str:
     
     lines.append("3. KEY DISCUSSION POINTS")
     lines.append("-" * 20)
-    key_points = json.loads(meeting.key_points) if meeting.key_points else []
+    try:
+        key_points = json.loads(meeting.key_points) if meeting.key_points else []
+    except Exception:
+        key_points = []
     if key_points:
         for kp in key_points:
             lines.append(f"- {kp}")
@@ -67,7 +70,10 @@ def generate_mom_text(meeting) -> str:
     
     lines.append("6. RECOMMENDATIONS")
     lines.append("-" * 20)
-    recs = json.loads(meeting.recommendations) if meeting.recommendations else []
+    try:
+        recs = json.loads(meeting.recommendations) if meeting.recommendations else []
+    except Exception:
+        recs = []
     if recs:
         for r in recs:
             lines.append(f"- {r}")
@@ -79,106 +85,88 @@ def generate_mom_text(meeting) -> str:
 
 
 def render_mom_tab(meeting):
-    section_header("📝 Minutes of Meeting", "Generated summary and exports")
+    section_header("Minutes of Meeting (MoM)", "Consolidated executive summary, participants, decisions, and action items with multi-format export.", category="Meeting Dossier")
     
     mom_text = generate_mom_text(meeting)
     
-    with st.container():
-        st.markdown(f"""
-            <div class="mom-card-marker"></div>
-            <style>
-            div[data-testid="stVerticalBlock"]:has(.mom-card-marker):not(:has(div[data-testid="stVerticalBlock"]:has(.mom-card-marker))) {{
-                background: var(--mt-surface) !important;
-                border-radius: var(--mt-radius-xl) !important;
-                padding: var(--mt-space-xl) !important;
-                box-shadow: var(--mt-shadow-soft) !important;
-                border: 1px solid var(--mt-border) !important;
-                margin-bottom: var(--mt-space-2xl) !important;
-            }}
-            div[data-testid="stVerticalBlock"]:has(.mom-card-marker) textarea {{
-                font-family: 'Courier New', Courier, monospace !important;
-                background: var(--mt-bg) !important;
-                border: 1px solid var(--mt-border) !important;
-                border-radius: var(--mt-radius-md) !important;
-                padding: var(--mt-space-lg) !important;
-                font-size: 0.95rem !important;
-                line-height: 1.6 !important;
-                color: var(--mt-text) !important;
-                resize: none !important;
-            }}
-            .mom-card-marker {{ display: none; }}
-            </style>
-        """, unsafe_allow_html=True)
-        st.text_area("MoM Preview", mom_text, height=450, label_visibility="collapsed")
+    with st.container(border=True):
+        st.caption("EXECUTIVE MINUTES OF MEETING (MOM) PREVIEW")
+        st.text_area("MoM Preview", mom_text, height=420, label_visibility="collapsed")
     
-    st.markdown("<h4 style='color: var(--mt-text); margin-bottom: var(--mt-space-lg); font-weight: 650; font-size: 1.25rem;'>↓ Export Options</h4>", unsafe_allow_html=True)
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.download_button(
-            label="TXT",
-            data=mom_text,
-            file_name=f"MoM_{meeting.id}.txt",
-            mime="text/plain",
-            use_container_width=True,
-            type="primary"
-        )
+    st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown("<h4 style='color: var(--mt-text); margin: 0 0 12px 0; font-weight: 700; font-size: 1.05rem;'>↓ Multi-Format Report Exports</h4>", unsafe_allow_html=True)
+        col1, col2, col3, col4 = st.columns(4)
         
-    with col2:
-        pdf_path = REPORTS_DIR / f"MoM_{meeting.id}.pdf"
-        if not pdf_path.exists():
-            try:
-                generate_pdf(meeting, str(pdf_path))
-            except Exception as e:
-                st.error(f"Failed to generate PDF: {e}")
+        with col1:
+            pdf_path = REPORTS_DIR / f"MoM_{meeting.id}.pdf"
+            if not pdf_path.exists():
+                try:
+                    generate_pdf(meeting, str(pdf_path))
+                except Exception as e:
+                    st.error(f"Failed to generate PDF: {e}")
+                    
+            if pdf_path.exists():
+                try:
+                    pdf_bytes = pdf_path.read_bytes()
+                    st.download_button(
+                        label="📄 Download PDF",
+                        data=pdf_bytes,
+                        file_name=f"MoM_{meeting.id}.pdf",
+                        mime="application/pdf",
+                        use_container_width=True,
+                        type="primary"
+                    )
+                except Exception:
+                    st.error("Unable to prepare PDF.")
+            else:
+                st.button("PDF Unavailable", disabled=True, use_container_width=True)
                 
-        if pdf_path.exists():
-            try:
-                pdf_bytes = pdf_path.read_bytes()
-                st.download_button(
-                    label="PDF",
-                    data=pdf_bytes,
-                    file_name=f"MoM_{meeting.id}.pdf",
-                    mime="application/pdf",
-                    use_container_width=True,
-                    type="primary"
-                )
-            except Exception as e:
-                st.error("Unable to prepare the PDF for download.")
-            
-    with col3:
-        docx_path = REPORTS_DIR / f"MoM_{meeting.id}.docx"
-        if not docx_path.exists():
-            try:
-                generate_docx(meeting, str(docx_path))
-            except Exception as e:
-                st.error(f"Failed to generate DOCX: {e}")
-                
-        if docx_path.exists():
-            try:
-                docx_bytes = docx_path.read_bytes()
-                st.download_button(
-                    label="Word",
-                    data=docx_bytes,
-                    file_name=f"MoM_{meeting.id}.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    use_container_width=True,
-                    type="primary"
-                )
-            except Exception as e:
-                st.error("Unable to prepare the DOCX for download.")
+        with col2:
+            docx_path = REPORTS_DIR / f"MoM_{meeting.id}.docx"
+            if not docx_path.exists():
+                try:
+                    generate_docx(meeting, str(docx_path))
+                except Exception as e:
+                    st.error(f"Failed to generate DOCX: {e}")
+                    
+            if docx_path.exists():
+                try:
+                    docx_bytes = docx_path.read_bytes()
+                    st.download_button(
+                        label="📝 Download Word",
+                        data=docx_bytes,
+                        file_name=f"MoM_{meeting.id}.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        use_container_width=True,
+                        type="secondary"
+                    )
+                except Exception:
+                    st.error("Unable to prepare DOCX.")
+            else:
+                st.button("Word Unavailable", disabled=True, use_container_width=True)
 
-    with col4:
-        try:
-            from reports.csv import generate_csv
-            csv_data = generate_csv(meeting)
+        with col3:
+            try:
+                from reports.csv import generate_csv
+                csv_data = generate_csv(meeting)
+                st.download_button(
+                    label="📊 Download CSV",
+                    data=csv_data.getvalue(),
+                    file_name=f"MoM_{meeting.id}.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                    type="secondary"
+                )
+            except Exception:
+                st.error("Unable to prepare CSV.")
+
+        with col4:
             st.download_button(
-                label="CSV",
-                data=csv_data.getvalue(),
-                file_name=f"MoM_{meeting.id}.csv",
-                mime="text/csv",
+                label="📃 Download TXT",
+                data=mom_text,
+                file_name=f"MoM_{meeting.id}.txt",
+                mime="text/plain",
                 use_container_width=True,
-                type="primary"
+                type="secondary"
             )
-        except Exception as e:
-            st.error("Unable to prepare the CSV for download.")
