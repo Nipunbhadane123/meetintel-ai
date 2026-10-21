@@ -7,8 +7,20 @@ logger = logging.getLogger(__name__)
 
 MODEL_SIZE = os.getenv("WHISPER_MODEL", "small")
 
-# Determine device and compute type
-if os.uname().sysname == "Darwin" and os.uname().machine == "arm64":
+import platform
+
+# Determine device and compute type safely across Windows, macOS, and Linux
+is_apple_silicon = False
+try:
+    if hasattr(os, "uname"):
+        uname = os.uname()
+        is_apple_silicon = getattr(uname, "sysname", "") == "Darwin" and getattr(uname, "machine", "") == "arm64"
+    else:
+        is_apple_silicon = platform.system() == "Darwin" and platform.machine() == "arm64"
+except Exception:
+    is_apple_silicon = False
+
+if is_apple_silicon:
     # Apple Silicon (M1/M2/M3)
     DEVICE = "cpu"  
     # int8 compute is significantly faster on Mac CPU
