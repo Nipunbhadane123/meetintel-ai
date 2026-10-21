@@ -416,3 +416,81 @@ def ask_knowledge(
     except Exception as e:
         logger.error(f"RAG failed: {e}")
         raise HTTPException(status_code=500, detail="Internal server error during ask")
+
+# ---------------------------------------------------------
+# Meeting ROI & Executive Export Endpoints
+# ---------------------------------------------------------
+
+@app.get("/meetings/{meeting_id}/roi")
+def get_meeting_roi(
+    meeting_id: str,
+    hourly_rate: float = 75.0,
+    db = Depends(get_db),
+    api_key: str = Depends(verify_api_key),
+    user_id: str = Depends(get_current_user_id)
+):
+    from utils.meeting_analytics import calculate_meeting_cost_roi
+    
+    user = repository.get_user_by_id(db, user_id)
+    org_id = user.org_id if user else "org-default-001"
+    
+    meeting = repository.get_meeting(db, meeting_id, org_id=org_id)
+    if not meeting:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+        
+    actions = repository.get_action_items(db, meeting_id=meeting_id, org_id=org_id)
+    decisions = repository.get_decisions(db, meeting_id=meeting_id, org_id=org_id)
+    blocked_count = sum(1 for a in actions if a.is_blocked or a.status == "Blocked")
+    
+    roi_data = calculate_meeting_cost_roi(
+        duration_seconds=meeting.duration or 1800.0,
+        speaker_count=meeting.speaker_count or 3,
+        action_items_count=len(actions),
+        decisions_count=len(decisions),
+        avg_hourly_rate=hourly_rate,
+        blocked_count=blocked_count
+    )
+    return {
+        "meeting_id": meeting_id,
+        "meeting_title": meeting.title,
+        "roi": roi_data
+    }
+
+@app.post("/meetings/{meeting_id}/export/slack")
+def export_meeting_slack(
+    meeting_id: str,
+    hourly_rate: float = 75.0,
+    db = Depends(get_db),
+    api_key: str = Depends(verify_api_key),
+    user_id: str = Depends(get_current_user_id)
+):
+    from utils.meeting_analytics import calculate_meeting_cost_roi, format_slack_executive_brief
+    
+    user = repository.get_user_by_id(db, user_id)
+    org_id = user.org_id if user else "org-default-001"
+    
+    meeting = repository.get_meeting(db, meeting_id, org_id=org_id)
+    if not meeting:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+        
+    actions = repository.get_action_items(db, meeting_id=meeting_id, org_id=org_id)
+    decisions = repository.get_decisions(db, meeting_id=meeting_id, org_id=org_id)
+    
+    cost_roi = calculate_meeting_cost_roi(
+        duration_seconds=meeting.duration or 1800.0,
+        speaker_count=meeting.speaker_count or 3,
+        action_items_count=len(actions),
+        decisions_count=len(decisions),
+        avg_hourly_rate=hourly_rate
+    )
+    
+    slack_payload = format_slack_executive_brief(
+        meeting_title=meeting.title,
+        date_str=str(meeting.date),
+        executive_summary=meeting.executive_summary or "",
+        decisions=[{"id": d.id, "title": d.title, "rationale": d.rationale} for d in decisions],
+        action_items=[{"task": a.task, "assigned_to": a.assigned_to, "deadline": a.deadline, "priority": a.priority} for a in actions],
+        cost_roi=cost_roi
+    )
+    return slack_payload
+

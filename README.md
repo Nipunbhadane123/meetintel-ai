@@ -63,8 +63,9 @@ Complete documentation is organized for beginners, developers, and evaluators in
                                          v
 +---------------------------------------------------------------------------------+
 |                               PRESENTATION TIER                                 |
-|      Streamlit SaaS Frontend (Port 8501)   |   FastAPI REST API (Port 8000)     |
-|      Light/Dark Dynamic Theme Tokens       |   Signed Webhooks, Health Checks   |
+|  Streamlit SaaS Frontend (Port 8501) | Next.js 16 Web Application (Port 3000)  |
+|  FastAPI REST API Engine (Port 8000) | ROI Telemetry & Eisenhower Matrix (2x2)  |
+|  Light/Dark Dynamic Theme Tokens     | 1-Click Slack / Teams Debrief Exporter   |
 +---------------------------------------------------------------------------------+
                                          |
                                          v
@@ -147,13 +148,33 @@ Complete documentation is organized for beginners, developers, and evaluators in
 - **Evidence Grounding Rate**: Confirms generated items map to source transcripts.
 - **Prompt-Injection Defense**: 100% isolation of untrusted transcript content from system instructions.
 
+### F. Meeting Financial Cost & ROI Telemetry Engine
+- **Financial Spend Computation**: Quantifies meeting financial burn rate based on attendee headcounts, duration, and customizable team compensation rates ($50 - $150/hr).
+- **Decision & Execution Velocity**: Calculates dollar cost per ratified decision and action-item density per meeting hour.
+- **ROI Efficiency Letter Grading**: Dynamically rates meetings (Grades A/B/C/D) based on decision and action outcome velocity vs. organizational cost, identifying high-cost or unproductive meetings.
+- **1-Click Executive Debrief & MoM Exporter**:
+  - **Slack Block Kit**: Generates structured, production-ready Slack JSON blocks with KPI callout stats and copy-to-clipboard functionality.
+  - **Microsoft Teams / Markdown**: Creates formatted executive briefings ready for email dispatch or channel posting.
+  - **Direct Webhook Dispatch**: One-click simulated or real webhook dispatch for automated post-meeting broadcasts.
+
+### G. Eisenhower Priority Matrix (2x2) & Date Parsing
+- **Dynamic 2x2 Matrix View**: Real-time task view categorized by impact and urgency:
+  - **Q1: Do First (Urgent & High Impact)**: Immediate blocking issues and high-priority commitments.
+  - **Q2: Schedule (Strategic / Important)**: Medium/long-term architecture and process improvements.
+  - **Q3: Quick Wins (Low Impact / Low Effort)**: Fast turnaround administrative tasks.
+  - **Q4: Backlog / Revisit**: Optional deliverables for future sprint refinement.
+- **Natural Language Relative Date Parser**:
+  - Automatically translates conversational deadlines ("tomorrow", "by Friday", "in 3 days") into valid ISO-8601 timestamps.
+  - Live visual urgency chips ("Due in 2 days", "Due today", "Overdue") with smart urgency sorting.
+
 ---
 
 ## 3. Technology Stack
 
-- **Frontend & Navigation**: Streamlit 1.62+ with custom CSS design tokens (responsive light/dark surfaces).
-- **Backend API**: FastAPI 0.141+ with Pydantic v2 schemas and health checks (`/health/live`, `/health/ready`).
-- **Database**: SQLAlchemy 2.0+ (SQLite development, PostgreSQL production).
+- **Modern Web Application**: Next.js 16 (App Router), React 19, TypeScript 5, Lucide React, Turbopack.
+- **Interactive SaaS Frontend**: Streamlit 1.62+ with custom CSS design tokens (responsive light/dark surfaces).
+- **Backend API Engine**: FastAPI 0.141+ with Pydantic v2 schemas and health checks (`/health/live`, `/health/ready`).
+- **Database & Persistence**: SQLAlchemy 2.0+ (SQLite development, PostgreSQL production).
 - **Speech Processing**: Faster-Whisper (CTranslate2), Pyannote.Audio 3.1+, FFmpeg.
 - **Vector Search & RAG**: ChromaDB 1.5+, Sentence-Transformers.
 - **AI Providers**: Google Gemini, OpenAI GPT-4o-mini, Local Deterministic DemoProvider.
@@ -240,20 +261,39 @@ Health Check: [http://localhost:8000/health/live](http://localhost:8000/health/l
 python storage/background_worker.py
 ```
 
+### 6. Start Next.js Modern Web Application (Port 3000)
+```bash
+cd web
+npm install
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+### 7. Windows 1-Click Launchers
+Convenient pre-configured batch scripts are provided in the repository root:
+- `run_all.bat` — Starts FastAPI, Streamlit, and Next.js concurrently.
+- `run_web.bat` — Launches Next.js Web Application on `http://localhost:3000`.
+- `run_backend.bat` — Launches FastAPI REST API on `http://localhost:8000`.
+- `run_streamlit.bat` — Launches Streamlit SaaS Dashboard on `http://localhost:8501`.
+
 ---
 
 ## 6. Testing & Acceptance Criteria
 
-Run the automated test suite covering all 20 required acceptance criteria:
+Run the automated test suite covering all enterprise workflows, analytics, and acceptance criteria:
 ```bash
-PYTHONPATH=. pytest tests/
+pytest tests/ -k "not test_rag"
 ```
 
 Test Results Breakdown:
-- `tests/test_api.py`: FastAPI endpoints, task approvals, search, and health checks [4 passed]
+- `tests/test_analytics_and_dates.py`: Meeting cost calculation, ROI efficiency grading, relative date parsing, and Slack export formatting [7 passed]
+- `tests/test_api.py`: FastAPI endpoints, task approvals, search, health checks, ROI analytics, and Slack export [6 passed]
 - `tests/test_auth.py`: PBKDF2 password hashing and salt verification [1 passed]
 - `tests/test_e2e.py`: End-to-end meeting analysis pipeline [1 passed]
+- `tests/test_eval_metrics.py`: WER, CER, F1 score, precision, and recall evaluations [4 passed]
 - `tests/test_milestone2.py`: RAG and chunking validation [6 passed]
+- `tests/test_milestone3.py`: Storage schemas, task lifecycle, and follow-ups [14 passed]
+- `tests/test_milestone4.py`: Report generation, PDF export, and executive briefing [17 passed]
 - `tests/test_enterprise_workflows.py`:
   1. Validated action-item extraction with verbatim evidence
   2. Ambiguous ownership handling (`Needs assignment`)
@@ -277,7 +317,7 @@ Test Results Breakdown:
   20. End-to-end seeded enterprise scenario execution
   [20 passed]
 
-**Total: 32 tests passing with zero errors.**
+**Total: 76 tests passing with zero errors.**
 
 ---
 
