@@ -71,21 +71,25 @@ def render_dashboard():
         # ---------------------------------------------------------------------------
         # 2.5 Executive Meeting ROI & Outcome Velocity Engine
         # ---------------------------------------------------------------------------
-        from utils.meeting_analytics import calculate_meeting_cost, calculate_meeting_roi, generate_slack_block_kit, generate_teams_memo_markdown
+        from utils.meeting_analytics import calculate_meeting_cost_roi, format_slack_executive_brief, format_markdown_executive_memo
         import json
 
-        total_duration_minutes = sum(getattr(m, 'duration_seconds', 1800) or 1800 for m in meetings) // 60 if meetings else 90
+        total_duration_seconds = sum(getattr(m, 'duration_seconds', 1800) or 1800 for m in meetings) if meetings else 5400
         avg_attendees = 3
         hourly_rate = float(st.session_state.get('stream_hourly_rate', 75.0))
-
-        cost_data = calculate_meeting_cost(total_duration_minutes, avg_attendees, hourly_rate)
         decisions_count = len(db.query(Decision).filter(Decision.org_id == org_id).all()) if org_id else 2
-        roi_data = calculate_meeting_roi(
-            cost_data['total_meeting_cost_usd'],
-            len(org_tasks) or 4,
-            decisions_count or 2,
-            total_duration_minutes or 90
+        actions_count = len(org_tasks) or 4
+        blocked_count = len(blocked_tasks) or 0
+
+        roi_data = calculate_meeting_cost_roi(
+            duration_seconds=total_duration_seconds,
+            speaker_count=avg_attendees,
+            action_items_count=actions_count,
+            decisions_count=decisions_count,
+            avg_hourly_rate=hourly_rate,
+            blocked_count=blocked_count
         )
+        cost_per_decision = round(roi_data['estimated_total_cost_usd'] / max(decisions_count, 1), 2)
 
         with st.container(border=True):
             r_col1, r_col2 = st.columns([3.2, 1.8])
@@ -93,9 +97,9 @@ def render_dashboard():
                 st.markdown(
                     f"<div style='display: flex; align-items: center; gap: 10px; margin-bottom: 6px;'>"
                     f"<span style='font-size: 0.72rem; font-weight: 700; color: #6366F1; letter-spacing: 0.08em; text-transform: uppercase;'>✦ ROI & OUTCOME VELOCITY ENGINE</span>"
-                    f"<span style='background: rgba(16, 185, 129, 0.15); color: #10B981; font-weight: 700; font-size: 0.75rem; padding: 2px 8px; border-radius: 6px;'>Grade: {roi_data['efficiency_grade']} ({roi_data['efficiency_label']})</span>"
+                    f"<span style='background: rgba(16, 185, 129, 0.15); color: {roi_data.get('grade_color', '#10B981')}; font-weight: 700; font-size: 0.75rem; padding: 2px 8px; border-radius: 6px;'>Grade: {roi_data['efficiency_grade']}</span>"
                     f"</div>"
-                    f"<h3 style='font-size: 1.25rem; font-weight: 750; color: var(--mt-text); margin: 0 0 4px 0;'>Meeting Investment: ${cost_data['total_meeting_cost_usd']:,.0f} USD across {len(meetings) or 3} sessions</h3>"
+                    f"<h3 style='font-size: 1.25rem; font-weight: 750; color: var(--mt-text); margin: 0 0 4px 0;'>Meeting Investment: ${roi_data['estimated_total_cost_usd']:,.0f} USD across {len(meetings) or 3} sessions</h3>"
                     f"<p style='color: var(--mt-text-secondary); font-size: 0.86rem; margin: 0;'>Achieving high decision velocity with <strong>{roi_data['decisions_per_hour']} decisions/hr</strong> and <strong>{roi_data['actions_per_hour']} action items/hr</strong>. All deliverables grounded in verbatim quotes.</p>",
                     unsafe_allow_html=True
                 )
@@ -107,7 +111,7 @@ def render_dashboard():
                         st.session_state['stream_hourly_rate'] = float(new_rate)
                         st.rerun()
                 with rate_col2:
-                    st.metric("Est. Cost/Dec", f"${roi_data['cost_per_decision_usd']:,.0f}")
+                    st.metric("Est. Cost/Dec", f"${cost_per_decision:,.0f}")
 
             with st.expander("⚡ 1-Click Executive Debrief Exporter (Slack Block Kit & Teams)", expanded=False):
                 slack_tab, teams_tab = st.tabs(["💬 Slack Block Kit", "📋 Teams / Markdown Memo"])
@@ -116,12 +120,26 @@ def render_dashboard():
                 recent_decisions = [{"decision": "Mandate OAuth 2.0 PKCE", "rationale": "Zero Trust Compliance"}]
 
                 with slack_tab:
-                    slack_payload = generate_slack_block_kit(meeting_name, cost_data, roi_data, recent_actions, recent_decisions)
+                    slack_payload = format_slack_executive_brief(
+                        meeting_title=meeting_name,
+                        date_str=date_str,
+                        executive_summary="Executive session aligned on strategic engineering roadmap and deliverable deadlines.",
+                        decisions=recent_decisions,
+                        action_items=recent_actions,
+                        cost_roi=roi_data
+                    )
                     st.code(json.dumps(slack_payload, indent=2), language="json")
                     if st.button("Simulate Slack Broadcast", key="dash_btn_slack_sim"):
                         st.toast("✅ Executive briefing successfully dispatched to Slack #executive-briefings!")
                 with teams_tab:
-                    teams_memo = generate_teams_memo_markdown(meeting_name, cost_data, roi_data, recent_actions, recent_decisions)
+                    teams_memo = format_markdown_executive_memo(
+                        meeting_title=meeting_name,
+                        date_str=date_str,
+                        executive_summary="Executive session aligned on strategic engineering roadmap and deliverable deadlines.",
+                        decisions=recent_decisions,
+                        action_items=recent_actions,
+                        cost_roi=roi_data
+                    )
                     st.markdown(teams_memo)
 
         st.markdown("<div style='height: 18px;'></div>", unsafe_allow_html=True)
