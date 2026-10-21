@@ -5,6 +5,20 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+import shutil
+
+def get_ffmpeg_binary() -> str:
+    """Finds available ffmpeg binary from system PATH or bundled imageio_ffmpeg."""
+    system_ffmpeg = shutil.which('ffmpeg')
+    if system_ffmpeg:
+        return system_ffmpeg
+    try:
+        import imageio_ffmpeg
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        pass
+    return 'ffmpeg'
+
 PROCESSED_DIR = Path("data/processed")
 PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -28,16 +42,11 @@ def process_audio(input_file: str) -> str:
         
     logger.info(f"Processing audio from {input_path} to {output_path}")
     
-    # FFmpeg command:
-    # -i input
-    # -vn : no video
-    # -acodec pcm_s16le : 16-bit PCM
-    # -ar 16000 : 16 kHz
-    # -ac 1 : mono
-    # -af loudnorm : normalize audio
+    ffmpeg_bin = get_ffmpeg_binary()
+    
     try:
         command = [
-            'ffmpeg',
+            ffmpeg_bin,
             '-i', str(input_path),
             '-vn',
             '-acodec', 'pcm_s16le',
