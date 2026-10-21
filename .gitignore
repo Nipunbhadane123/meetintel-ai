@@ -114,3 +114,4 @@ web/.next/
 web/out/
 *.tsbuildinfo
 next-env.d.ts
+web/AGENTS.md
