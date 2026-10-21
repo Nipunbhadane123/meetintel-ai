@@ -4,6 +4,9 @@ os.environ["GEMINI_API_KEY"] = "mock_key"
 import pytest
 from fastapi.testclient import TestClient
 from api.main import app
+from storage.database import init_db
+
+init_db()
 
 client = TestClient(app)
 API_KEY = "dev-secret-key"
@@ -34,3 +37,12 @@ def test_ask(mock_rag_ask):
 def test_auth_failure():
     response = client.get("/meetings", headers={"X-API-Key": "wrong"})
     assert response.status_code == 403
+
+def test_roi_endpoint_not_found():
+    response = client.get("/meetings/non-existent-id-999/roi", headers=HEADERS)
+    assert response.status_code == 404
+
+def test_export_slack_not_found():
+    response = client.post("/meetings/non-existent-id-999/export/slack", headers=HEADERS)
+    assert response.status_code == 404
+
